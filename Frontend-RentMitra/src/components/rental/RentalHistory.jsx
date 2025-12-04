@@ -1,0 +1,1 @@
+// RentalHistory component placeholder

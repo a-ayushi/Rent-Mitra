@@ -1,0 +1,1 @@
+// RentalBooking component placeholder

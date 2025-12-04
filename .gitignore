@@ -1,0 +1,19 @@
+# Java services
+Backrnd-RentMitra-Java/**/target/
+Backrnd-RentMitra-Java/**/build/
+Backrnd-RentMitra-Java/**/.idea/
+Backrnd-RentMitra-Java/**/.classpath
+Backrnd-RentMitra-Java/**/.project
+
+# Firebase / service accounts (keep only locally, never commit)
+Backrnd-RentMitra-Java/**/firebase-service-account.json
+
+# Node / frontend
+Frontend-RentMitra/node_modules/
+Frontend-RentMitra/dist/
+
+# Local env files
+Frontend-RentMitra/.env
+# Local sensitive configs
+Backrnd-RentMitra-Java/api-gateway/src/main/resources/application.yaml
+Backrnd-RentMitra-Java/api-gateway/src/main/resources/firebase-service-account.json

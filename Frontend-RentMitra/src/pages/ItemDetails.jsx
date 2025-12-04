@@ -1,0 +1,187 @@
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import itemService from "../services/itemService";
+import { useAuth } from "../hooks/useAuth";
+import ChatModal from '../components/ChatModal';
+import axios from 'axios';
+import {
+  ArrowBack,
+  Visibility,
+  Favorite,
+  FavoriteBorder,
+} from "@mui/icons-material";
+
+const ItemDetails = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [item, setItem] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [views, setViews] = useState(0);
+  const [error, setError] = useState("");
+  const { user } = useAuth();
+  const [isFavorited, setIsFavorited] = useState(false);
+
+  // Chat modal state
+  const [chatModalOpen, setChatModalOpen] = useState(false);
+  const [chatId, setChatId] = useState(null);
+  const [chatLoading, setChatLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchItem = async () => {
+      setLoading(true);
+      try {
+        const res = await itemService.getItem(id);
+        setItem(res.data);
+        setViews(res.data.views || 0);
+        setIsFavorited(res.data.favoritedBy?.includes(user?.id));
+        setLoading(false);
+      } catch {
+        setError("Failed to load item.");
+        setLoading(false);
+      }
+    };
+    fetchItem();
+    // Increment view count
+    itemService.incrementItemViews(id).then((res) => {
+      if (res.data && typeof res.data.views === "number") {
+        setViews(res.data.views);
+      }
+    });
+  }, [id, user]);
+
+  const handleToggleFavorite = async () => {
+    try {
+      const res = await itemService.toggleFavorite(id);
+      setIsFavorited(res.data.data.isFavorited);
+    } catch {
+      // handle error
+    }
+  };
+
+  if (loading) return <div className="p-12 text-center">Loading item...</div>;
+  if (error || !item)
+    return (
+      <div className="p-12 text-center text-red-600">
+        {error || "Item not found."}
+      </div>
+    );
+
+  // Handler for chat button
+  const handleChatWithOwner = async () => {
+    setChatLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const backendBase = import.meta.env.VITE_API_URL || 'http://localhost:8086';
+      const res = await axios.post(`${backendBase}/api/chats/start`, {
+        productId: item._id,
+        otherUserId: item.owner._id
+      }, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      setChatId(res.data._id);
+      setChatModalOpen(true);
+    } catch {
+      // handle error
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <div className="container px-4 py-12 mx-auto">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 mb-6 text-gray-600 hover:text-gray-900"
+        >
+          <ArrowBack /> Back
+        </button>
+        <div className="max-w-4xl p-8 mx-auto bg-white shadow-xl rounded-2xl">
+          <div className="flex flex-col gap-8 md:flex-row">
+            <div className="flex-shrink-0 w-full md:w-1/2">
+              {item.images && item.images.length > 0 ? (
+                <img
+                  src={item.images[0].url}
+                  alt={item.name}
+                  className="object-cover w-full rounded-lg h-72"
+                />
+              ) : (
+                <div className="w-full bg-gray-200 rounded-lg h-72" />
+              )}
+              <div className="flex gap-2 mt-2">
+                {item.images &&
+                  item.images
+                    .slice(1)
+                    .map((img, idx) => (
+                      <img
+                        key={idx}
+                        src={img.url}
+                        alt="thumb"
+                        className="object-cover w-16 h-16 rounded"
+                      />
+                    ))}
+              </div>
+            </div>
+            <div className="flex-grow">
+              <h1 className="mb-2 text-3xl font-bold">{item.name}</h1>
+              <div className="flex items-center gap-4 mb-4 text-gray-600">
+                <span className="flex items-center">
+                  <Visibility className="mr-1" /> {views} views
+                </span>
+                <span className="px-2 py-1 text-xs font-semibold text-gray-700 bg-gray-100 rounded-full">
+                  {item.category?.name}
+                </span>
+                {item.subcategory && (
+                  <span className="px-2 py-1 text-xs font-semibold text-purple-700 bg-purple-100 rounded-full">
+                    {item.subcategory.name}
+                  </span>
+                )}
+                {user && user.id !== item.owner?._id && (
+                  <button
+                    onClick={handleToggleFavorite}
+                    className="ml-2 text-red-500 hover:text-red-700"
+                  >
+                    {isFavorited ? <Favorite /> : <FavoriteBorder />}
+                  </button>
+                )}
+              </div>
+              <p className="mb-4 text-gray-700">{item.description}</p>
+              <div className="mb-4">
+                <strong>Price per day:</strong> ₹{item.pricePerDay}
+              </div>
+              <div className="mb-4">
+                <strong>Location:</strong> {item.location?.address},{" "}
+                {item.location?.city}, {item.location?.state}
+              </div>
+              <div className="mb-4">
+                <strong>Owner:</strong> {item.owner?.name}
+              </div>
+              <button className="px-6 py-2 mt-4 font-semibold text-white bg-gray-800 rounded-lg shadow-md hover:bg-gray-900">
+                Book Now
+              </button>
+              {user && user.id !== item.owner?._id && (
+                <button
+                  className="px-6 py-2 mt-4 ml-4 font-semibold text-white bg-blue-600 rounded-lg shadow-md hover:bg-blue-700"
+                  onClick={handleChatWithOwner}
+                  disabled={chatLoading}
+                >
+                  {chatLoading ? 'Loading...' : 'Chat with Owner'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      <ChatModal
+        open={chatModalOpen}
+        onClose={() => setChatModalOpen(false)}
+        chatId={chatId}
+        currentUser={user}
+        otherUser={item?.owner}
+        product={item}
+      />
+    </div>
+  );
+};
+
+export default ItemDetails;
