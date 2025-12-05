@@ -24,7 +24,8 @@ public class Product {
     private String navigation;
     private String message;
     private String mobileNumber;
-    @Lob
+
+    @Column(columnDefinition = "TEXT")   // or omit columnDefinition and let Hibernate choose
     private String imageUrls;
 
     public String getImageUrls() {

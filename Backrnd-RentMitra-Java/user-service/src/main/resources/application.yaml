@@ -9,9 +9,9 @@ spring:
     name: USER-SERVICE
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/user-service
-    username: postgres
-    password: pass123
+    url: jdbc:postgresql://us-east-1.484d70c2-e6c6-4f28-9da7-41fa288fec6c.aws.yugabyte.cloud:5433/yugabyte?ssl=true&sslmode=verify-full&sslrootcert=D:\\aayushi\\RentMitra\\Backrnd-RentMitra-Java\\root.crt
+    username: aayushi
+    password: "Aayushi@123"
     driver-class-name: org.postgresql.Driver
 
   jpa:
