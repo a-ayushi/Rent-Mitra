@@ -2,9 +2,38 @@ import api from './api';
 
 const itemService = {
   // Get items with filters
-  getItems: (params) => {
-    // TODO: map filters to Java product filter endpoints; for now, fetch all products
-    return api.get('/api/products/getAllProducts');
+  getItems: async (params) => {
+    const products = await api.get('/api/products/getAllProducts');
+
+    const rawItems = Array.isArray(products) ? products : [];
+
+    // Map Java ProductDto -> shape expected by existing React UI / ItemCard
+    const items = rawItems.map((p) => ({
+      ...p,
+      // React side expects Mongo-style _id
+      _id: p.productId ?? p._id,
+      // Main image field used by ItemCard
+      mainImage: Array.isArray(p.imageUrls) && p.imageUrls.length > 0 ? p.imageUrls[0] : undefined,
+      // Normalize price field name
+      pricePerDay: p.rentBasedOnType ?? p.pricePerDay,
+      // Very simple location mapping from address
+      location: p.address
+        ? {
+            city: p.address,
+          }
+        : p.location,
+      // Availability fallback (you can adjust when backend supports it)
+      isAvailable: typeof p.isAvailable === 'boolean' ? p.isAvailable : true,
+    }));
+
+    return {
+      items,
+      pagination: {
+        total: items.length,
+        pages: 1,
+        page: 1,
+      },
+    };
   },
 
   // Get single item

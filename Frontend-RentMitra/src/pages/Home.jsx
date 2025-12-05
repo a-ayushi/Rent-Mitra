@@ -42,16 +42,27 @@ const Home = () => {
   const [categoryGrid, setCategoryGrid] = React.useState([]);
 
   React.useEffect(() => {
-    // Fetch categories for the grid (top-level only)
+    // Fetch categories for the grid from Java backend ProductController
     const fetchCategories = async () => {
-      let url = "/categories";
-      const params = [];
-      if (city && city !== "India") params.push(`city=${encodeURIComponent(city)}`);
-      if (params.length) url += `?${params.join("&")}`;
-      const data = await api.get(url);
-      const categories = data || [];
-      setCategoryGrid(categories.filter((cat) => !cat.parentCategory));
+      // Java controller is mapped at /api/products, with /categories endpoint
+      const data = await api.get("/api/products/categories");
+      const categories = Array.isArray(data) ? data : [];
+
+      // Map backend CategoryDTO -> shape expected by the Home grid
+      const mapped = categories.map((cat) => ({
+        _id: cat.categoryId,
+        name: cat.name,
+        // Use a default icon for now; can be extended later
+        icon: "📦",
+        // Use number of subcategories as a simple itemCount approximation
+        itemCount: Array.isArray(cat.subcategories) ? cat.subcategories.length : 0,
+        // Simple slug from name (used in navigation if needed)
+        slug: cat.name ? cat.name.toLowerCase().replace(/\s+/g, "-") : cat.categoryId,
+      }));
+
+      setCategoryGrid(mapped);
     };
+
     fetchCategories();
   }, [city]);
 
