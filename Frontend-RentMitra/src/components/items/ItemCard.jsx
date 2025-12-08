@@ -13,7 +13,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import itemService from '../../services/itemService';
 
-const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = false }) => {
+const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = false, onToggleFavorite }) => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
@@ -45,6 +45,12 @@ const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = fal
       navigate('/login');
       return;
     }
+    // If a custom toggle handler is provided (e.g. from Favorites page), use it
+    if (onToggleFavorite) {
+      onToggleFavorite(item._id);
+      return;
+    }
+    // Fallback to internal mutation for general item lists
     toggleFavorite();
   };
 

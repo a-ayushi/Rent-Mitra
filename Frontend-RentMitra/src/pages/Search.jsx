@@ -289,9 +289,9 @@ const Search = () => {
               </div>
             ) : (
               <>
-                <p className="mb-4 text-sm text-gray-600">
+                {/* <p className="mb-4 text-sm text-gray-600">
                   Found {data?.pagination?.total || 0} items
-                </p>
+                </p> */}
                 {mapView ? (
                   <div className="h-[600px] rounded-2xl overflow-hidden shadow-lg">
                     <MapView

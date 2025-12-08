@@ -94,7 +94,7 @@ function App() {
                 <AppProvider>
                   <div className="flex flex-col min-h-screen">
                     <Navbar />
-                    <main className="flex-grow pt-16">
+                    <main className="flex-grow">
                       <Routes>
                         {/* Public Routes */}
                         <Route path="/" element={<Home />} />
