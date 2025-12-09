@@ -93,8 +93,8 @@ const AppContent = () => {
 
   return (
     <div
-      className={`flex flex-col min-h-screen ${
-        isAuthRoute ? "overflow-y-hidden" : ""
+      className={`flex flex-col ${
+        isAuthRoute ? "h-screen overflow-y-auto no-scrollbar" : "min-h-screen"
       }`}
     >
       {!isRegisterRoute && <Navbar />}
