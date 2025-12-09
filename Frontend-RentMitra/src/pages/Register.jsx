@@ -191,9 +191,9 @@ const Register = () => {
                   </div>
                 )}
 
-                <div className="flex flex-col md:flex-row md:items-start md:gap-8">
+                <div className="flex flex-col md:flex-row md:items-start md:gap-6">
                   {/* Left: signup form */}
-                  <form className="w-full md:w-2/3 space-y-6" onSubmit={handleSubmit}>
+                  <form className="w-full md:w-7/12 space-y-6" onSubmit={handleSubmit}>
                     <InputField
                       id="name"
                       name="name"
@@ -304,9 +304,18 @@ const Register = () => {
                     </button>
                   </form>
 
+                  {/* Center: vertical OR with lines */}
+                  <div className="hidden md:flex flex-col items-center justify-center px-3 mt-38">
+                    <div className="h-22 border-l border-gray-300 mb-1" />
+                    <div className="text-xs font-semibold tracking-widest text-gray-500 uppercase">
+                      OR
+                    </div>
+                    <div className="h-22 border-l border-gray-300 mt-1" />
+                  </div>
+
                   {/* Right: external login options */}
-                  <div className="mt-6 md:mt-0 md:w-64 md:pl-4">
-                    <div className="relative">
+                  <div className="mt-6 md:mt-0 w-full md:w-5/12 md:pl-2">
+                    <div className="relative md:hidden mb-4">
                       <div className="absolute inset-0 flex items-center">
                         <div className="w-full border-t border-gray-300" />
                       </div>
@@ -317,16 +326,16 @@ const Register = () => {
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-3 mt-6">
+                    <div className="flex flex-col items-center gap-8 mt-40">
                       <button
                         onClick={() => handleSocialLogin("Google")}
-                        className="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+                        className="inline-flex justify-center w-full md:w-52 px-4 py-2 text-sm font-medium text-white bg-[#DB4437] rounded-md shadow-sm hover:bg-[#c33c30]"
                       >
                         <Google className="w-5 h-5 mr-2" /> Google
                       </button>
                       <button
                         onClick={() => handleSocialLogin("Facebook")}
-                        className="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+                        className="inline-flex justify-center w-full md:w-52 px-4 py-2 text-sm font-medium text-white bg-[#1877F2] rounded-md shadow-sm hover:bg-[#145fcc]"
                       >
                         <Facebook className="w-5 h-5 mr-2" /> Facebook
                       </button>
