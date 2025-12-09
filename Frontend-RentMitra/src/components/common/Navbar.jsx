@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ChatModal from '../ChatModal';
 import axios from 'axios';
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import categoryService from "../../services/categoryService";
 import logo from "../../assets/RENTMITRALOGO.png";
@@ -23,8 +23,12 @@ import ProfileSidebar from './ProfileSidebar';
 import { useCity } from '../../hooks/useCity';
 
 const Navbar = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+
+  const isAuthRoute =
+    location.pathname === "/login" || location.pathname === "/register";
 
   // Chat modal state
   const [chatModalOpen, setChatModalOpen] = useState(false);
@@ -184,7 +188,11 @@ const Navbar = () => {
     <>
       <nav className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
         {/* Main Navbar */}
-        <div className="flex items-center justify-between px-4 py-3 mx-auto lg:px-6 max-w-7xl">
+        <div
+          className={`flex items-center justify-between px-4 mx-auto lg:px-6 max-w-7xl ${
+            isAuthRoute ? 'py-2' : 'py-3'
+          }`}
+        >
           {/* Logo - Larger Size */}
           <Link to="/" className="flex items-center mr-4 lg:mr-8">
             <img
@@ -375,73 +383,70 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Category Navigation - Desktop */}
-        <div className="hidden bg-white border-t border-gray-200 md:block">
-          <div className="flex items-center gap-6 px-4 py-3 mx-auto lg:px-6 max-w-7xl">
-            <div 
-              className="relative category-dropdown"
-              onMouseEnter={() => setCategoryDropdownOpen(true)}
-              onMouseLeave={() => setCategoryDropdownOpen(false)}
-            >
-              <button className="flex items-center gap-1 text-sm font-semibold text-gray-700 transition-colors hover:text-gray-900">
-                ALL CATEGORIES
-                <ExpandMore className={`w-4 h-4 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-              
-              {/* Category Dropdown */}
-              {categoryDropdownOpen && (
-                <div className="absolute left-0 z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl min-w-[600px] lg:min-w-[800px]">
-                  <div className="p-6 lg:p-8">
-                    <div className="grid grid-cols-2 gap-6 lg:grid-cols-4 lg:gap-8">
-                      {categories.map((cat) => (
-                        <div key={cat._id}>
-                          <h3 
-                            className="mb-3 text-sm font-bold text-gray-800 transition-colors cursor-pointer hover:text-gray-900"
-                            onClick={() => {
-                              setCategoryDropdownOpen(false);
-                              navigate(`/category/${cat.slug || cat._id}`);
-                            }}
-                          >
-                            {cat.name}
-                          </h3>
-                          <ul className="space-y-2">
-                            {cat.subcategories?.slice(0, 5).map(sub => (
-                              <li key={sub._id}>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setCategoryDropdownOpen(false);
-                                    navigate(`/category/${sub.slug || sub._id}`);
-                                  }}
-                                  className="text-xs text-gray-600 transition-colors hover:text-gray-900 hover:underline"
-                                >
-                                  {sub.name}
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
+        {!isAuthRoute && (
+          <div className="hidden bg-white border-t border-gray-200 md:block">
+            <div className="flex items-center gap-6 px-4 py-3 mx-auto lg:px-6 max-w-7xl">
+              <div 
+                className="relative category-dropdown"
+                onMouseEnter={() => setCategoryDropdownOpen(true)}
+                onMouseLeave={() => setCategoryDropdownOpen(false)}
+              >
+                <button className="flex items-center gap-1 text-sm font-semibold text-gray-700 transition-colors hover:text-gray-900">
+                  ALL CATEGORIES
+                  <ExpandMore className={`w-4 h-4 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {categoryDropdownOpen && (
+                  <div className="absolute left-0 z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl min-w-[600px] lg:min-w-[800px]">
+                    <div className="p-6 lg:p-8">
+                      <div className="grid grid-cols-2 gap-6 lg:grid-cols-4 lg:gap-8">
+                        {categories.map((cat) => (
+                          <div key={cat._id}>
+                            <h3 
+                              className="mb-3 text-sm font-bold text-gray-800 transition-colors cursor-pointer hover:text-gray-900"
+                              onClick={() => {
+                                setCategoryDropdownOpen(false);
+                                navigate(`/category/${cat.slug || cat._id}`);
+                              }}
+                            >
+                              {cat.name}
+                            </h3>
+                            <ul className="space-y-2">
+                              {cat.subcategories?.slice(0, 5).map(sub => (
+                                <li key={sub._id}>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCategoryDropdownOpen(false);
+                                      navigate(`/category/${sub.slug || sub._id}`);
+                                    }}
+                                    className="text-xs text-gray-600 transition-colors hover:text-gray-900 hover:underline"
+                                  >
+                                    {sub.name}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-            
-            {/* Quick Category Links */}
-            <div className="flex gap-4 overflow-x-auto lg:gap-6">
-              {categories.slice(0, 6).map((cat, index) => (
-                <button
-                  key={cat._id || cat.id || `${cat.name || 'cat'}-${index}`}
-                  onClick={() => navigate(`/category/${cat.slug || cat._id}`)}
-                  className="py-1 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900 whitespace-nowrap"
-                >
-                  {cat.name}
-                </button>
-              ))}
+                )}
+              </div>
+              <div className="flex gap-4 overflow-x-auto lg:gap-6">
+                {categories.slice(0, 6).map((cat, index) => (
+                  <button
+                    key={cat._id || cat.id || `${cat.name || 'cat'}-${index}`}
+                    onClick={() => navigate(`/category/${cat.slug || cat._id}`)}
+                    className="py-1 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900 whitespace-nowrap"
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
@@ -511,24 +516,25 @@ const Navbar = () => {
                 Messages
               </button>
 
-              {/* Mobile Categories */}
-              <div className="pt-3 border-t border-gray-200">
-                <div className="mb-3 text-sm font-semibold text-gray-700">Categories</div>
-                <div className="grid grid-cols-2 gap-2">
-                  {categories.slice(0, 8).map((cat) => (
-                    <button
-                      key={cat._id}
-                      onClick={() => {
-                        navigate(`/category/${cat.slug || cat._id}`);
-                        setMobileMenuOpen(false);
-                      }}
-                      className="px-3 py-2 text-sm text-left text-gray-600 transition-colors rounded-md hover:text-gray-900 hover:bg-gray-50"
-                    >
-                      {cat.name}
-                    </button>
-                  ))}
+              {!isAuthRoute && (
+                <div className="pt-3 border-t border-gray-200">
+                  <div className="mb-3 text-sm font-semibold text-gray-700">Categories</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {categories.slice(0, 8).map((cat) => (
+                      <button
+                        key={cat._id}
+                        onClick={() => {
+                          navigate(`/category/${cat.slug || cat._id}`);
+                          setMobileMenuOpen(false);
+                        }}
+                        className="px-3 py-2 text-sm text-left text-gray-600 transition-colors rounded-md hover:text-gray-900 hover:bg-gray-50"
+                      >
+                        {cat.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Mobile Actions */}
               {isAuthenticated && (

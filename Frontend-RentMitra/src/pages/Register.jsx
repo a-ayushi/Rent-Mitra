@@ -13,6 +13,7 @@ import {
   Facebook,
 } from "@mui/icons-material";
 import OTPVerification from "../components/auth/OTPVerification";
+import logo from "../assets/RENTMITRALOGO.png";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -136,201 +137,219 @@ const Register = () => {
   );
 
   return (
-    <div className="flex items-center justify-center min-h-screen px-4 py-12 bg-gray-100 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
-        <div>
-          <h2 className="mt-6 text-3xl font-extrabold text-center text-gray-900">
-            Create your account
-          </h2>
-          <p className="mt-2 text-sm text-center text-gray-600">
-            And start your journey with Rent Mitra
-          </p>
+    <div className="flex flex-col min-h-screen bg-gray-100">
+      <header className="w-full">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center">
+          <Link
+            to="/"
+            className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
+          >
+            <span className="mr-1">←</span>
+            <span>Back</span>
+          </Link>
+          {/* <img src={logo} alt="Rent Mitra" className="h-10 sm:h-12 ml-3" /> */}
         </div>
-        <div className="p-8 bg-white shadow-xl rounded-2xl">
-          {showOTP && registeredUserId ? (
-            <OTPVerification
-              userId={registeredUserId}
-              onSuccess={() => {
-                setShowOTP(false);
-                setAlertMessage("OTP verified! Logging you in...");
-                setAlertSeverity("success");
-                setTimeout(
-                  () =>
-                    login({
-                      email: formData.email,
-                      password: formData.password,
-                    }).then(() => navigate("/dashboard")),
-                  1000
-                );
-              }}
-            />
-          ) : (
-            <>
-              {alertMessage && (
-                <div
-                  className={`p-4 mb-6 rounded-md text-sm ${
-                    alertSeverity === "error"
-                      ? "bg-red-100 text-red-700"
-                      : "bg-green-100 text-green-700"
-                  }`}
-                >
-                  {alertMessage}
-                </div>
-              )}
-              <form className="space-y-6" onSubmit={handleSubmit}>
-                <InputField
-                  id="name"
-                  name="name"
-                  type="text"
-                  placeholder="Full Name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  error={errors.name}
-                  icon={<Person className="text-gray-400" />}
-                />
-                <InputField
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Email Address"
-                  value={formData.email}
-                  onChange={handleChange}
-                  error={errors.email}
-                  icon={<Email className="text-gray-400" />}
-                />
-                <InputField
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  placeholder="Phone Number"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  error={errors.phone}
-                  icon={<Phone className="text-gray-400" />}
-                />
-                <InputField
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  error={errors.password}
-                  icon={<Lock className="text-gray-400" />}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </button>
-                </InputField>
-                <InputField
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm Password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  error={errors.confirmPassword}
-                  icon={<Lock className="text-gray-400" />}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
-                  >
-                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                  </button>
-                </InputField>
+      </header>
 
-                <div>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      name="agreeToTerms"
-                      checked={formData.agreeToTerms}
+      <main className="flex flex-1 items-start justify-center px-3 py-3 sm:px-4 lg:px-6">
+        <div className="w-full max-w-3xl space-y-3 mt-1">
+          <div>
+            <h2 className="text-xl font-extrabold text-center text-gray-900">
+              Create your account
+            </h2>
+            
+          </div>
+          <div className="p-6 bg-white shadow-xl rounded-2xl">
+            {showOTP && registeredUserId ? (
+              <OTPVerification
+                userId={registeredUserId}
+                onSuccess={() => {
+                  setShowOTP(false);
+                  setAlertMessage("OTP verified! Logging you in...");
+                  setAlertSeverity("success");
+                  setTimeout(
+                    () =>
+                      login({
+                        email: formData.email,
+                        password: formData.password,
+                      }).then(() => navigate("/dashboard")),
+                    1000
+                  );
+                }}
+              />
+            ) : (
+              <>
+                {alertMessage && (
+                  <div
+                    className={`p-4 mb-6 rounded-md text-sm ${
+                      alertSeverity === "error"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-green-100 text-green-700"
+                    }`}
+                  >
+                    {alertMessage}
+                  </div>
+                )}
+
+                <div className="flex flex-col md:flex-row md:items-start md:gap-8">
+                  {/* Left: signup form */}
+                  <form className="w-full md:w-2/3 space-y-6" onSubmit={handleSubmit}>
+                    <InputField
+                      id="name"
+                      name="name"
+                      type="text"
+                      placeholder="Full Name"
+                      value={formData.name}
                       onChange={handleChange}
-                      className="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-gray-500"
+                      error={errors.name}
+                      icon={<Person className="text-gray-400" />}
                     />
-                    <span className="ml-2 text-sm text-gray-600">
-                      I agree to the{" "}
-                      <Link
-                        to="/terms"
-                        className="font-medium text-gray-600 hover:underline"
+                    <InputField
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="Email Address"
+                      value={formData.email}
+                      onChange={handleChange}
+                      error={errors.email}
+                      icon={<Email className="text-gray-400" />}
+                    />
+                    <InputField
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      placeholder="Phone Number"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      error={errors.phone}
+                      icon={<Phone className="text-gray-400" />}
+                    />
+                    <InputField
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      error={errors.password}
+                      icon={<Lock className="text-gray-400" />}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
                       >
-                        Terms & Conditions
-                      </Link>{" "}
-                      and{" "}
-                      <Link
-                        to="/privacy"
-                        className="font-medium text-gray-600 hover:underline"
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </button>
+                    </InputField>
+                    <InputField
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm Password"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      error={errors.confirmPassword}
+                      icon={<Lock className="text-gray-400" />}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
                       >
-                        Privacy Policy
-                      </Link>
-                      .
-                    </span>
-                  </label>
-                  {errors.agreeToTerms && (
-                    <p className="mt-1 text-xs text-red-500">
-                      {errors.agreeToTerms}
-                    </p>
-                  )}
-                </div>
+                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                      </button>
+                    </InputField>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex justify-center w-full px-4 py-3 text-sm font-medium text-white bg-gray-800 border border-transparent rounded-lg shadow-sm hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:bg-gray-400"
-                >
-                  {loading ? "Creating Account..." : "Create Account"}
-                </button>
-              </form>
+                    <div>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          name="agreeToTerms"
+                          checked={formData.agreeToTerms}
+                          onChange={handleChange}
+                          className="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-gray-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-600">
+                          I agree to the{" "}
+                          <Link
+                            to="/terms"
+                            className="font-medium text-gray-600 hover:underline"
+                          >
+                            Terms & Conditions
+                          </Link>{" "}
+                          and{" "}
+                          <Link
+                            to="/privacy"
+                            className="font-medium text-gray-600 hover:underline"
+                          >
+                            Privacy Policy
+                          </Link>
+                          .
+                        </span>
+                      </label>
+                      {errors.agreeToTerms && (
+                        <p className="mt-1 text-xs text-red-500">
+                          {errors.agreeToTerms}
+                        </p>
+                      )}
+                    </div>
 
-              <div className="mt-6">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300" />
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="flex justify-center w-full px-4 py-3 text-sm font-medium text-white bg-gray-800 border border-transparent rounded-lg shadow-sm hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:bg-gray-400"
+                    >
+                      {loading ? "Creating Account..." : "Create Account"}
+                    </button>
+                  </form>
+
+                  {/* Right: external login options */}
+                  <div className="mt-6 md:mt-0 md:w-64 md:pl-4">
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-300" />
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 text-gray-500 bg-white">
+                          Or continue with
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3 mt-6">
+                      <button
+                        onClick={() => handleSocialLogin("Google")}
+                        className="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+                      >
+                        <Google className="w-5 h-5 mr-2" /> Google
+                      </button>
+                      <button
+                        onClick={() => handleSocialLogin("Facebook")}
+                        className="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+                      >
+                        <Facebook className="w-5 h-5 mr-2" /> Facebook
+                      </button>
+                    </div>
                   </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 text-gray-500 bg-white">
-                      Or continue with
-                    </span>
-                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 mt-6">
-                  <button
-                    onClick={() => handleSocialLogin("Google")}
-                    className="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
-                  >
-                    <Google className="w-5 h-5 mr-2" /> Google
-                  </button>
-                  <button
-                    onClick={() => handleSocialLogin("Facebook")}
-                    className="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
-                  >
-                    <Facebook className="w-5 h-5 mr-2" /> Facebook
-                  </button>
+                <div className="mt-6 text-center">
+                  <p className="text-sm text-gray-600">
+                    Already have an account?{" "}
+                    <Link
+                      to="/login"
+                      className="font-medium text-gray-600 hover:text-gray-500"
+                    >
+                      Sign in
+                    </Link>
+                  </p>
                 </div>
-              </div>
-
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600">
-                  Already have an account?{" "}
-                  <Link
-                    to="/login"
-                    className="font-medium text-gray-600 hover:text-gray-500"
-                  >
-                    Sign in
-                  </Link>
-                </p>
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

@@ -73,19 +73,16 @@ const Login = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen px-4 py-12 bg-gray-100 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
+    <div className="flex items-center justify-center min-h-[calc(100vh-220px)] px-3 py-3 bg-gray-100 sm:px-4 lg:px-6">
+      <div className="w-full max-w-md space-y-6">
         <div>
-          <h2 className="mt-6 text-3xl font-extrabold text-center text-gray-900">
-            Welcome Back
+          <h2 className="mt-1 text-xl font-extrabold text-center text-gray-900">
+            Welcome Back!
           </h2>
-          <p className="mt-2 text-sm text-center text-gray-600">
-            Login to your account to continue
-          </p>
         </div>
-        <div className="p-8 bg-white shadow-xl rounded-2xl">
+        <div className="p-6 bg-white shadow-xl rounded-2xl">
           {/* Toggle login method */}
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-3">
             <button
               className={`px-4 py-2 rounded-l-lg border ${!usePhoneLogin ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700'}`}
               onClick={() => setUsePhoneLogin(false)}
@@ -313,7 +310,7 @@ const Login = () => {
               </div>
             </div>
           )}
-          <div className="mt-6 text-center">
+          <div className="mt-2 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{" "}
               <Link to="/register" className="font-medium text-gray-600 hover:text-gray-500">

@@ -4,6 +4,8 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation,
+  Link,
 } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { ReactQueryDevtools } from "react-query/devtools";
@@ -82,20 +84,22 @@ const queryClient = new QueryClient({
   },
 });
 
-function App() {
+const AppContent = () => {
+  const location = useLocation();
+
+  const isLoginRoute = location.pathname === "/login";
+  const isRegisterRoute = location.pathname === "/register";
+  const isAuthRoute = isLoginRoute || isRegisterRoute;
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <CssBaseline />
-          <Router>
-            <AuthProvider>
-              <CityProvider>
-                <AppProvider>
-                  <div className="flex flex-col min-h-screen">
-                    <Navbar />
-                    <main className="flex-grow">
-                      <Routes>
+    <div
+      className={`flex flex-col min-h-screen ${
+        isAuthRoute ? "overflow-y-hidden" : ""
+      }`}
+    >
+      {!isRegisterRoute && <Navbar />}
+      <main className="flex-grow">
+        <Routes>
                         {/* Public Routes */}
                         <Route path="/" element={<Home />} />
                         <Route path="/login" element={<Login />} />
@@ -206,9 +210,40 @@ function App() {
                         {/* Catch all */}
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Routes>
-                    </main>
-                    <Footer />
-                  </div>
+      </main>
+      {isAuthRoute ? (
+        <footer className="bg-gray-900 text-white mt-auto">
+          <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs sm:text-sm text-gray-400 gap-2">
+            <span>© 2025 Rentra Mitra</span>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Link to="/privacy" className="hover:text-white transition-colors duration-300">
+                Privacy Policy
+              </Link>
+              <span className="hidden sm:inline">|</span>
+              <Link to="/terms" className="hover:text-white transition-colors duration-300">
+                Terms & Conditions
+              </Link>
+            </div>
+          </div>
+        </footer>
+      ) : (
+        <Footer />
+      )}
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider theme={theme}>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <CssBaseline />
+          <Router>
+            <AuthProvider>
+              <CityProvider>
+                <AppProvider>
+                  <AppContent />
                 </AppProvider>
               </CityProvider>
             </AuthProvider>
