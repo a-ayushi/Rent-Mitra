@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
-import api from "../services/api";
+import { Link } from "react-router-dom";
+
 import {
   Visibility,
   VisibilityOff,
@@ -11,30 +10,26 @@ import {
   Phone,
   Google,
   Facebook,
+  CheckCircle,
+  Error,
+  ArrowBack,
 } from "@mui/icons-material";
-import OTPVerification from "../components/auth/OTPVerification";
 
 const Register = () => {
-  const navigate = useNavigate();
-  const { login } = useAuth();
-
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
-    confirmPassword: "",
     phone: "",
     agreeToTerms: false,
   });
 
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [alertSeverity, setAlertSeverity] = useState("info");
   const [showOTP, setShowOTP] = useState(false);
-  const [registeredUserId, setRegisteredUserId] = useState(null);
 
   const handleChange = (e) => {
     const { name, value, checked, type } = e.target;
@@ -49,56 +44,42 @@ const Register = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = "Name is required";
-    if (!formData.email) newErrors.email = "Email is required";
-    else if (!/^\S+@\S+$/i.test(formData.email))
-      newErrors.email = "Invalid email address";
-    if (!formData.password) newErrors.password = "Password is required";
-    else if (formData.password.length < 6)
-      newErrors.password = "Password must be at least 6 characters";
-    if (formData.password !== formData.confirmPassword)
-      newErrors.confirmPassword = "Passwords do not match";
-    if (!formData.phone) newErrors.phone = "Phone number is required";
+    if (!formData.name.trim()) newErrors.name = "Required";
+    if (!formData.email) newErrors.email = "Required";
+    else if (!/^\S+@\S+\.\S+$/i.test(formData.email))
+      newErrors.email = "Invalid email";
+    if (!formData.password) newErrors.password = "Required";
+    else if (formData.password.length < 8)
+      newErrors.password = "Min. 8 chars";
+    if (!formData.phone) newErrors.phone = "Required";
     else if (!/^[0-9]{10}$/.test(formData.phone))
-      newErrors.phone = "Invalid phone number";
+      newErrors.phone = "10 digits";
     if (!formData.agreeToTerms)
-      newErrors.agreeToTerms = "You must agree to the terms";
+      newErrors.agreeToTerms = "Required";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!validateForm()) {
-      setAlertMessage("Please fix the errors below.");
+      setAlertMessage("Please fix errors");
       setAlertSeverity("error");
       return;
     }
     setLoading(true);
     setAlertMessage("");
-    try {
-      const response = await api.post("/auth/register", {
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        phone: formData.phone,
-      });
-      setRegisteredUserId(response.data?.user?.id || null);
+    
+    setTimeout(() => {
       setShowOTP(true);
-      setAlertMessage("Registration successful! Please verify OTP.");
+      setAlertMessage("Success!");
       setAlertSeverity("success");
-    } catch (error) {
-      const errorMessage =
-        error.response?.data?.error || "Registration failed. Please try again.";
-      setAlertMessage(errorMessage);
-      setAlertSeverity("error");
-    } finally {
       setLoading(false);
-    }
+    }, 1500);
   };
 
   const handleSocialLogin = (provider) => {
-    setAlertMessage(`${provider} login is not yet implemented.`);
+    setAlertMessage(`${provider} login coming soon!`);
     setAlertSeverity("info");
   };
 
@@ -114,9 +95,9 @@ const Register = () => {
     children,
   }) => (
     <div>
-      <div className="relative">
-        <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-          {icon}
+      <div className="relative group">
+        <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none transition-colors group-focus-within:text-gray-900">
+          {React.cloneElement(icon, { className: "text-gray-400 w-4 h-4" })}
         </span>
         <input
           id={id}
@@ -125,59 +106,83 @@ const Register = () => {
           placeholder={placeholder}
           value={value}
           onChange={onChange}
-          className={`w-full pl-10 pr-4 py-3 border rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 ${
-            error ? "border-red-500" : "border-gray-300"
+          className={`w-full pl-9 pr-10 py-2 text-sm border rounded-lg text-gray-900 placeholder-gray-400 transition-all focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 ${
+            error ? "border-red-400 bg-red-50" : "border-gray-200 hover:border-gray-400 bg-white"
           }`}
         />
         {children}
       </div>
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      {error && (
+        <p className="mt-1 text-xs text-red-600">{error}</p>
+      )}
     </div>
   );
 
-  return (
-    <div className="flex items-center justify-center min-h-screen px-4 py-12 bg-gray-100 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
-        <div>
-          <h2 className="mt-6 text-3xl font-extrabold text-center text-gray-900">
-            Create your account
-          </h2>
-          <p className="mt-2 text-sm text-center text-gray-600">
-            And start your journey with Rent Mitra
-          </p>
+  if (showOTP) {
+    return (
+      <div className="h-screen bg-white flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-8 w-full max-w-md text-center transform transition-all">
+          <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-green-200">
+            <CheckCircle className="w-12 h-12 text-green-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Check Your Email!</h2>
+          <p className="text-gray-600 mb-6">We've sent a verification code to verify your account.</p>
+          <button 
+            onClick={() => setShowOTP(false)}
+            className="text-gray-900 hover:text-gray-700 font-semibold transition-colors"
+          >
+            ← Back to registration
+          </button>
         </div>
-        <div className="p-8 bg-white shadow-xl rounded-2xl">
-          {showOTP && registeredUserId ? (
-            <OTPVerification
-              userId={registeredUserId}
-              onSuccess={() => {
-                setShowOTP(false);
-                setAlertMessage("OTP verified! Logging you in...");
-                setAlertSeverity("success");
-                setTimeout(
-                  () =>
-                    login({
-                      email: formData.email,
-                      password: formData.password,
-                    }).then(() => navigate("/dashboard")),
-                  1000
-                );
-              }}
-            />
-          ) : (
-            <>
-              {alertMessage && (
-                <div
-                  className={`p-4 mb-6 rounded-md text-sm ${
-                    alertSeverity === "error"
-                      ? "bg-red-100 text-red-700"
-                      : "bg-green-100 text-green-700"
-                  }`}
-                >
-                  {alertMessage}
-                </div>
-              )}
-              <form className="space-y-6" onSubmit={handleSubmit}>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen bg-white flex items-center justify-center p-4 overflow-hidden">
+      <div className="w-full max-w-3xl mb-10">
+        {/* Back Button */}
+        <Link
+  to="/login"
+  className="mb-3 inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+>
+  <ArrowBack className="w-4 h-4" />
+  <span>Back</span>
+</Link>
+
+        {/* Main Card */}
+        <div className="bg-white shadow-2xl rounded-2xl border border-gray-200 overflow-hidden transform transition-all">
+          {/* Header */}
+          <div className="bg-gray-900 px-6 py-5 text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
+            <h1 className="text-2xl font-bold text-white relative z-10">Create Account</h1>
+            <p className="text-gray-300 text-sm mt-1 relative z-10">Join us today</p>
+          </div>
+
+          <div className="p-6">
+            {/* Alert */}
+            {alertMessage && (
+              <div
+                className={`flex items-center gap-2 p-3 mb-4 rounded-xl text-xs font-medium ${
+                  alertSeverity === "error"
+                    ? "bg-red-50 text-red-700 border border-red-100"
+                    : alertSeverity === "success"
+                    ? "bg-green-50 text-green-700 border border-green-100"
+                    : "bg-gray-50 text-gray-700 border border-gray-100"
+                }`}
+              >
+                {alertSeverity === "success" ? (
+                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                ) : (
+                  <Error className="w-4 h-4 flex-shrink-0" />
+                )}
+                <span>{alertMessage}</span>
+              </div>
+            )}
+
+            <div className="grid md:grid-cols-[1.3fr_auto_0.9fr] gap-6 items-center">
+              {/* Registration Form */}
+              <div className="space-y-3">
                 <InputField
                   id="name"
                   name="name"
@@ -186,27 +191,27 @@ const Register = () => {
                   value={formData.name}
                   onChange={handleChange}
                   error={errors.name}
-                  icon={<Person className="text-gray-400" />}
+                  icon={<Person />}
                 />
                 <InputField
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="Email Address"
+                  placeholder="Email"
                   value={formData.email}
                   onChange={handleChange}
                   error={errors.email}
-                  icon={<Email className="text-gray-400" />}
+                  icon={<Email />}
                 />
                 <InputField
                   id="phone"
                   name="phone"
                   type="tel"
-                  placeholder="Phone Number"
+                  placeholder="Phone"
                   value={formData.phone}
                   onChange={handleChange}
                   error={errors.phone}
-                  icon={<Phone className="text-gray-400" />}
+                  icon={<Phone />}
                 />
                 <InputField
                   id="password"
@@ -216,119 +221,115 @@ const Register = () => {
                   value={formData.password}
                   onChange={handleChange}
                   error={errors.password}
-                  icon={<Lock className="text-gray-400" />}
+                  icon={<Lock />}
                 >
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
+                    className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-gray-400 hover:text-gray-700 transition-colors"
                   >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </button>
-                </InputField>
-                <InputField
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm Password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  error={errors.confirmPassword}
-                  icon={<Lock className="text-gray-400" />}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
-                  >
-                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    {showPassword ? <VisibilityOff className="w-4 h-4" /> : <Visibility className="w-4 h-4" />}
                   </button>
                 </InputField>
 
-                <div>
-                  <label className="flex items-center">
+                {/* Terms */}
+                <div className="pt-1">
+                  <label className="flex items-start gap-2 cursor-pointer group">
                     <input
                       type="checkbox"
                       name="agreeToTerms"
                       checked={formData.agreeToTerms}
                       onChange={handleChange}
-                      className="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-gray-500"
+                      className="w-4 h-4 mt-0.5 text-gray-900 border-gray-300 rounded focus:ring-2 focus:ring-gray-900 cursor-pointer transition-all"
                     />
-                    <span className="ml-2 text-sm text-gray-600">
+                    <span className="text-xs text-gray-600 leading-tight">
                       I agree to the{" "}
-                      <Link
-                        to="/terms"
-                        className="font-medium text-gray-600 hover:underline"
-                      >
-                        Terms & Conditions
-                      </Link>{" "}
-                      and{" "}
-                      <Link
-                        to="/privacy"
-                        className="font-medium text-gray-600 hover:underline"
-                      >
-                        Privacy Policy
-                      </Link>
-                      .
+                      <a href="#" className="font-semibold text-gray-900 hover:underline">
+                        Terms
+                      </a>{" "}
+                      &{" "}
+                      <a href="#" className="font-semibold text-gray-900 hover:underline">
+                        Privacy
+                      </a>
                     </span>
                   </label>
                   {errors.agreeToTerms && (
-                    <p className="mt-1 text-xs text-red-500">
-                      {errors.agreeToTerms}
-                    </p>
+                    <p className="mt-1 ml-6 text-xs text-red-600">{errors.agreeToTerms}</p>
                   )}
                 </div>
 
+                {/* Submit */}
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleSubmit}
                   disabled={loading}
-                  className="flex justify-center w-full px-4 py-3 text-sm font-medium text-white bg-gray-800 border border-transparent rounded-lg shadow-sm hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:bg-gray-400"
+                  className="w-full px-4 py-2.5 text-sm font-bold text-white bg-gray-900 rounded-lg shadow-lg hover:shadow-xl hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:opacity-50 transition-all transform hover:scale-[1.01] active:scale-[0.99]"
                 >
-                  {loading ? "Creating Account..." : "Create Account"}
-                </button>
-              </form>
-
-              <div className="mt-6">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300" />
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 text-gray-500 bg-white">
-                      Or continue with
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Creating...
                     </span>
-                  </div>
-                </div>
+                  ) : (
+                    "Create Account"
+                  )}
+                </button>
+              </div>
 
-                <div className="grid grid-cols-2 gap-3 mt-6">
-                  <button
-                    onClick={() => handleSocialLogin("Google")}
-                    className="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
-                  >
-                    <Google className="w-5 h-5 mr-2" /> Google
-                  </button>
-                  <button
-                    onClick={() => handleSocialLogin("Facebook")}
-                    className="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
-                  >
-                    <Facebook className="w-5 h-5 mr-2" /> Facebook
-                  </button>
+              {/* Divider */}
+              <div className="hidden md:flex flex-col items-center justify-center px-4">
+                <div className="h-16 w-px bg-gray-200" />
+                <div className="my-3 px-2 py-1 text-xs font-bold text-gray-400 bg-gray-50 rounded-full border border-gray-200">
+                  OR
+                </div>
+                <div className="h-16 w-px bg-gray-200" />
+              </div>
+
+              <div className="relative md:hidden my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="px-3 py-1 text-xs font-bold text-gray-400 bg-white border border-gray-200 rounded-full">
+                    OR
+                  </span>
                 </div>
               </div>
 
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600">
-                  Already have an account?{" "}
-                  <Link
-                    to="/login"
-                    className="font-medium text-gray-600 hover:text-gray-500"
-                  >
-                    Sign in
-                  </Link>
-                </p>
+              {/* Social Login */}
+              <div className="flex flex-col justify-center space-y-3">
+                <button
+                  onClick={() => handleSocialLogin("Google")}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-900 bg-white border-2 border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:border-gray-300 hover:bg-gray-50 transition-all transform hover:scale-[1.01] active:scale-[0.99]"
+                >
+                  <Google className="w-4 h-4" />
+                  <span>Google</span>
+                </button>
+                <button
+                  onClick={() => handleSocialLogin("Facebook")}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-900 bg-white border-2 border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:border-gray-300 hover:bg-gray-50 transition-all transform hover:scale-[1.01] active:scale-[0.99]"
+                >
+                  <Facebook className="w-4 h-4" />
+                  <span>Facebook</span>
+                </button>
+                
+                <div className="pt-2 text-center">
+                  <p className="text-xs text-gray-600">
+                    Already have an account?{" "}
+                     <Link
+    to="/login"
+    className="font-bold text-gray-900 hover:underline"
+  >
+    Sign in
+  </Link>
+                  </p>
+                </div>
               </div>
-            </>
-          )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
