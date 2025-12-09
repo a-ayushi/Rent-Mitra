@@ -27,8 +27,11 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
 
+  const isForgotPasswordRoute = location.pathname === "/forgot-password";
   const isAuthRoute =
-    location.pathname === "/login" || location.pathname === "/register";
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
+    isForgotPasswordRoute;
 
   // Chat modal state
   const [chatModalOpen, setChatModalOpen] = useState(false);
@@ -310,22 +313,26 @@ const Navbar = () => {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-2 lg:gap-3">
-            {/* Favourites */}
-            <button
-              onClick={() => navigate("/favorites")}
-              className="p-2 text-gray-600 transition-colors rounded-md hover:text-red-500 hover:bg-red-50"
-              title="Favourites"
-            >
-              <FavoriteBorder className="w-5 h-5" />
-            </button>
-            {/* Chat */}
-            <button
-              onClick={() => navigate("/messages")}
-              className="p-2 text-gray-600 transition-colors rounded-md hover:text-blue-500 hover:bg-blue-50"
-              title="Chat"
-            >
-              <ChatBubbleOutline className="w-5 h-5" />
-            </button>
+            {/* Favourites (hidden on forgot-password) */}
+            {!isForgotPasswordRoute && (
+              <button
+                onClick={() => navigate("/favorites")}
+                className="p-2 text-gray-600 transition-colors rounded-md hover:text-red-500 hover:bg-red-50"
+                title="Favourites"
+              >
+                <FavoriteBorder className="w-5 h-5" />
+              </button>
+            )}
+            {/* Chat (hidden on forgot-password) */}
+            {!isForgotPasswordRoute && (
+              <button
+                onClick={() => navigate("/messages")}
+                className="p-2 text-gray-600 transition-colors rounded-md hover:text-blue-500 hover:bg-blue-50"
+                title="Chat"
+              >
+                <ChatBubbleOutline className="w-5 h-5" />
+              </button>
+            )}
 
             {/* Login/Profile Section */}
             {isAuthenticated ? (
@@ -364,14 +371,16 @@ const Navbar = () => {
               </button>
             )}
 
-            {/* RENT Button */}
-            <button
-              onClick={() => navigate("/add-item")}
-              className="flex items-center gap-1 px-4 py-2 text-sm font-bold text-white transition-colors bg-gray-900 rounded-full shadow-md lg:gap-2 lg:px-6 hover:bg-gray-800 hover:shadow-lg"
-            >
-              <Add className="w-4 h-4" />
-              <span className="hidden sm:block">RENT</span>
-            </button>
+            {/* RENT Button (hidden on forgot-password) */}
+            {!isForgotPasswordRoute && (
+              <button
+                onClick={() => navigate("/add-item")}
+                className="flex items-center gap-1 px-4 py-2 text-sm font-bold text-white transition-colors bg-gray-900 rounded-full shadow-md lg:gap-2 lg:px-6 hover:bg-gray-800 hover:shadow-lg"
+              >
+                <Add className="w-4 h-4" />
+                <span className="hidden sm:block">RENT</span>
+              </button>
+            )}
 
             {/* Mobile Menu Button */}
             <button

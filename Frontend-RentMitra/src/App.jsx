@@ -89,7 +89,8 @@ const AppContent = () => {
 
   const isLoginRoute = location.pathname === "/login";
   const isRegisterRoute = location.pathname === "/register";
-  const isAuthRoute = isLoginRoute || isRegisterRoute;
+  const isForgotPasswordRoute = location.pathname === "/forgot-password";
+  const isAuthRoute = isLoginRoute || isRegisterRoute || isForgotPasswordRoute;
 
   return (
     <div
