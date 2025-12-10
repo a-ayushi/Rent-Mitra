@@ -182,12 +182,12 @@ const Login = () => {
                     setOtpLoading(true);
                     try {
                       const resp = await authService.sendOtp(phone);
-                      if (resp.success) {
+                      if (resp.status === "success") {
                         setOtpSent(true);
-                        setOtpSuccess("OTP sent!");
+                        setOtpSuccess(resp.message || "OTP sent!");
                         setResendTimer(60);
                       } else {
-                        setOtpError(resp.error || "Failed to send OTP");
+                        setOtpError(resp.message || "Failed to send OTP");
                       }
                     } catch (err) {
                       setOtpError(err?.error || err?.message || "Failed to send OTP");
@@ -231,11 +231,12 @@ const Login = () => {
                     setOtpLoading(true);
                     try {
                       const resp = await authService.verifyOtp(phone, otp);
-                      if (resp.success && resp.token) {
-                        await login({ token: resp.token, user: resp.user });
+                      if (resp.status === "success" && resp.jwt) {
+                        // Store JWT and mark user as logged in
+                        await login({ token: resp.jwt });
                         navigate("/dashboard");
                       } else {
-                        setOtpError(resp.error || "Invalid OTP");
+                        setOtpError(resp.message || "Invalid OTP");
                       }
                     } catch (err) {
                       setOtpError(err?.error || err?.message || "Failed to verify OTP");
@@ -275,11 +276,11 @@ const Login = () => {
   setOtpLoading(true);
   try {
     const resp = await authService.sendOtp(phone);
-    if (resp.success) {
-      setOtpSuccess("OTP resent!");
+    if (resp.status === "success") {
+      setOtpSuccess(resp.message || "OTP resent!");
       setResendTimer(60);
     } else {
-      setOtpError(resp.error || "Failed to resend OTP");
+      setOtpError(resp.message || "Failed to resend OTP");
     }
   } catch (err) {
     setOtpError(err?.error || err?.message || "Failed to resend OTP");

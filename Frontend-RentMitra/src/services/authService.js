@@ -7,12 +7,12 @@ const authService = {
 
   // Send OTP to phone
   sendOtp: (phone) => {
-    return api.post('/auth/send-otp', { phone });
+    return api.get(`/api/client/auth/requestOtp/${phone}`);
   },
 
   // Verify OTP for phone login
   verifyOtp: (phone, otp) => {
-    return api.post('/auth/verify-otp', { phone, otp });
+    return api.post('/api/client/auth/verifyOtp/', { otp, phoneNo: phone });
   },
 
   login: (credentials) => {

@@ -15,7 +15,7 @@ const Categories = () => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8086/product';
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8086';
       const response = await fetch(`${baseUrl}/api/products/categories`);
       
       if (!response.ok) {

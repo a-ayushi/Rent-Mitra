@@ -48,12 +48,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (credentials) => {
-    // OTP login: credentials will have token and user directly
-    if (credentials.token && credentials.user) {
+    // OTP login: may have just a JWT token, or token+user
+    if (credentials.token) {
       localStorage.setItem("token", credentials.token);
-      setUser(credentials.user);
+      if (credentials.user) {
+        setUser(credentials.user);
+      }
       setIsAuthenticated(true);
-      return { token: credentials.token, user: credentials.user };
+      return { token: credentials.token, user: credentials.user || null };
     }
     // Email/password login: call backend
     try {
