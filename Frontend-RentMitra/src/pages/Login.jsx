@@ -92,7 +92,12 @@ const Login = () => {
             </button>
             <button
               className={`px-4 py-2 rounded-r-lg border border-l-0 ${usePhoneLogin ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700'}`}
-              onClick={() => setUsePhoneLogin(true)}
+              onClick={() => {
+                setUsePhoneLogin(true);
+                if (!phone) {
+                  setPhone("+91 ");
+                }
+              }}
               type="button"
             >
               Phone Login
@@ -202,7 +207,15 @@ const Login = () => {
                       name="phone"
                       type="tel"
                       value={phone}
-                      onChange={e => setPhone(e.target.value)}
+                      onChange={(e) => {
+                        let value = e.target.value || "";
+                        // Always enforce +91 prefix
+                        if (!value.startsWith("+91 ")) {
+                          // Remove any existing +91 then re-add cleanly
+                          value = "+91 " + value.replace(/^\+91/, "");
+                        }
+                        setPhone(value);
+                      }}
                       placeholder="Phone number (e.g. +919999999999)"
                       className="w-full py-3 pl-4 pr-4 text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                       required
