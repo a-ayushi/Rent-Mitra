@@ -37,13 +37,30 @@ const Login = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const from = location.state?.from?.pathname || "/dashboard";
+  const from = location.state?.from?.pathname || "/";
 
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm();
+
+  // Format phone as +91XXXXXXXXXX (no spaces) for backend/SMS provider
+  const formatPhoneForBackend = (value) => {
+    if (!value) return "";
+    const digits = value.replace(/\D/g, ""); // remove non-digits
+    if (digits.length === 10) {
+      return `+91${digits}`;
+    }
+    if (digits.length === 12 && digits.startsWith("91")) {
+      return `+${digits}`;
+    }
+    if (value.startsWith("+")) {
+      // already has + and some country code; just strip spaces
+      return `+${digits}`;
+    }
+    return value.replace(/\s+/g, "");
+  };
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -64,7 +81,7 @@ const Login = () => {
         setRefreshToken(response.data.refreshToken);
       }
       await login(credentials);
-      navigate("/dashboard");
+navigate(from, { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || err.message || "Failed to login");
     } finally {
@@ -186,7 +203,8 @@ const Login = () => {
                     setOtpSuccess("");
                     setOtpLoading(true);
                     try {
-                      const resp = await authService.sendOtp(phone);
+                      const backendPhone = formatPhoneForBackend(phone);
+                      const resp = await authService.sendOtp(backendPhone);
                       if (resp.status === "success") {
                         setOtpSent(true);
                         setOtpSuccess(resp.message || "OTP sent!");
@@ -243,11 +261,12 @@ const Login = () => {
                     setOtpError("");
                     setOtpLoading(true);
                     try {
-                      const resp = await authService.verifyOtp(phone, otp);
+                      const backendPhone = formatPhoneForBackend(phone);
+                      const resp = await authService.verifyOtp(backendPhone, otp);
                       if (resp.status === "success" && resp.jwt) {
                         // Store JWT and mark user as logged in
                         await login({ token: resp.jwt });
-                        navigate("/dashboard");
+                        navigate("/");
                       } else {
                         setOtpError(resp.message || "Invalid OTP");
                       }

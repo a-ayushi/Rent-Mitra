@@ -168,10 +168,20 @@ const Navbar = () => {
   };
 
   useEffect(() => {
-    if (city) {
+    const isAuthRoute =
+      location.pathname === "/login" ||
+      location.pathname === "/register" ||
+      location.pathname === "/forgot-password";
+
+    const isSearchRoute = location.pathname.startsWith("/search");
+    const isItemDetailsRoute = location.pathname.startsWith("/items/");
+
+    // Only auto-redirect to search when we are on generic pages,
+    // not on item details or auth/search routes.
+    if (city && !isAuthRoute && !isSearchRoute && !isItemDetailsRoute) {
       navigate(`/search?city=${encodeURIComponent(city)}`);
     }
-  }, [city]);
+  }, [city, location.pathname, navigate]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

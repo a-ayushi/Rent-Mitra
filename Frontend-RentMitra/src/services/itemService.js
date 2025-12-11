@@ -36,9 +36,36 @@ const itemService = {
     };
   },
 
-  // Get single item
-  getItem: (id) => {
-    return api.get(`/items/${id}`);
+  // Get single item (Java products API)
+  getItem: async (id) => {
+    const p = await api.get(`/api/products/get-by-id?productId=${id}`);
+
+    // Map Java ProductDto -> shape expected by existing React UI / ItemDetails
+    const mapped = {
+      ...p,
+      // Normalize id
+      _id: p.productId ?? p._id ?? id,
+      // Normalize main image + images array (UI often expects images[].url)
+      mainImage: Array.isArray(p.imageUrls) && p.imageUrls.length > 0
+        ? p.imageUrls[0]
+        : p.mainImage,
+      images: Array.isArray(p.imageUrls)
+        ? p.imageUrls.map((url) => ({ url }))
+        : p.images,
+      // Normalize price field name
+      pricePerDay: p.rentBasedOnType ?? p.pricePerDay,
+      // Basic location mapping from address string
+      location: p.address
+        ? {
+            ...(p.location || {}),
+            address: p.address,
+            city: p.city || p.address,
+            state: p.state || p.location?.state,
+          }
+        : p.location,
+    };
+
+    return mapped;
   },
 
   // Create item

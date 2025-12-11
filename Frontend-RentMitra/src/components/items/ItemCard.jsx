@@ -62,6 +62,10 @@ const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = fal
     ? `${item.location.city}, ${item.location.state}`
     : item.location?.city || item.location?.state || item.location?.country || 'Unknown';
 
+  const createdAtText = item.createdAt
+    ? new Date(item.created_at).toLocaleDateString()
+    : null;
+
   return (
     <div
       onClick={handleCardClick}
@@ -97,65 +101,40 @@ const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = fal
       </div>
 
       <div className="flex flex-col flex-grow p-4">
-        <h3 className="mb-2 text-lg font-semibold text-gray-800 truncate">
+        {/* Price on top */}
+        <div className="mb-1 text-xl font-bold text-gray-900">
+          {typeof item.pricePerDay === 'number' ? (
+            <span>
+              ₹{item.pricePerDay}
+              <span className="text-sm font-normal text-gray-500">/day</span>
+            </span>
+          ) : (
+            'Contact for price'
+          )}
+        </div>
+
+        {/* Product name under price */}
+        <h3 className="mb-2 text-sm font-medium text-gray-800 line-clamp-2">
           {item.title || item.name || 'Untitled'}
         </h3>
 
-        <div className="flex items-center mb-2 text-sm text-gray-500">
-          <LocationIcon className="w-4 h-4 mr-1" />
-          {locationText}
-        </div>
-
-        <div className="flex items-center mb-3">
-          <StarIcon className="w-5 h-5 mr-1 text-yellow-400" />
-          <span className="font-bold text-gray-800">
-            {typeof item.averageRating === 'number' ? item.averageRating.toFixed(1) : 'New'}
-          </span>
-          <span className="ml-1 text-sm text-gray-500">
-            ({typeof item.totalReviews === 'number' ? item.totalReviews : 0} reviews)
-          </span>
-        </div>
-
-        <div className="mt-auto">
-          <div className="mb-3 text-xl font-bold text-gray-900">
-            {typeof item.pricePerDay === 'number' ? (
-              <span>
-                ₹{item.pricePerDay}
-                <span className="text-sm font-normal text-gray-500">/day</span>
-              </span>
-            ) : (
-              'Contact for price'
-            )}
-          </div>
-
-          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-            <div className="flex items-center">
-              <img
-                src={item.owner?.profileImage?.url || '/placeholder.jpg'}
-                alt={item.owner?.name || 'Owner'}
-                className="object-cover w-8 h-8 mr-2 rounded-full"
-              />
-              <span className="text-sm text-gray-700">
-                {item.owner?.name || 'Owner'}
-              </span>
-              {item.owner?.verification?.identity && (
-                <VerifiedIcon className="w-4 h-4 ml-1 text-gray-500" titleAccess="Verified User" />
-              )}
+        {/* Location + date row at the bottom, subtle like OLX */}
+        <div className="mt-auto pt-2 border-t border-gray-100 text-xs text-gray-500">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center truncate">
+              <LocationIcon className="w-4 h-4 mr-1 flex-shrink-0" />
+              <span className="truncate">{locationText}</span>
             </div>
-            <span
-              className={`text-xs font-bold px-2 py-1 rounded-full ${
-                item.isAvailable
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-gray-200 text-gray-700'
-              }`}
-            >
-              {item.isAvailable ? 'Available' : 'Unavailable'}
-            </span>
+            {createdAtText && (
+              <span className="whitespace-nowrap text-[11px] uppercase tracking-wide">
+                {createdAtText}
+              </span>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 };
-
+  
 export default ItemCard;

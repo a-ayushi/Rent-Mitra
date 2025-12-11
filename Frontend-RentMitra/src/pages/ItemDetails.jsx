@@ -30,10 +30,10 @@ const ItemDetails = () => {
     const fetchItem = async () => {
       setLoading(true);
       try {
-        const res = await itemService.getItem(id);
-        setItem(res.data);
-        setViews(res.data.views || 0);
-        setIsFavorited(res.data.favoritedBy?.includes(user?.id));
+        const product = await itemService.getItem(id);
+        setItem(product);
+        setViews(product.views || 0);
+        setIsFavorited(product.favoritedBy?.includes(user?.id));
         setLoading(false);
       } catch {
         setError("Failed to load item.");
@@ -41,12 +41,6 @@ const ItemDetails = () => {
       }
     };
     fetchItem();
-    // Increment view count
-    itemService.incrementItemViews(id).then((res) => {
-      if (res.data && typeof res.data.views === "number") {
-        setViews(res.data.views);
-      }
-    });
   }, [id, user]);
 
   const handleToggleFavorite = async () => {
@@ -124,19 +118,22 @@ const ItemDetails = () => {
             </div>
             <div className="flex-grow">
               <h1 className="mb-2 text-3xl font-bold">{item.name}</h1>
-              <div className="flex items-center gap-4 mb-4 text-gray-600">
+
+              <div className="flex flex-wrap items-center gap-3 mb-4 text-sm text-gray-600">
                 <span className="flex items-center">
                   <Visibility className="mr-1" /> {views} views
                 </span>
-                <span className="px-2 py-1 text-xs font-semibold text-gray-700 bg-gray-100 rounded-full">
-                  {item.category?.name}
-                </span>
-                {item.subcategory && (
-                  <span className="px-2 py-1 text-xs font-semibold text-purple-700 bg-purple-100 rounded-full">
-                    {item.subcategory.name}
+                {item.rentType && (
+                  <span className="px-2 py-1 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
+                    Rent type: {item.rentType}
                   </span>
                 )}
-                {user && user.id !== item.owner?._id && (
+                {typeof item.rentBasedOnType === 'number' && (
+                  <span className="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">
+                    ₹{item.rentBasedOnType} / {item.rentType || 'duration'}
+                  </span>
+                )}
+                {user && item.owner && user.id !== item.owner?._id && (
                   <button
                     onClick={handleToggleFavorite}
                     className="ml-2 text-red-500 hover:text-red-700"
@@ -145,23 +142,66 @@ const ItemDetails = () => {
                   </button>
                 )}
               </div>
-              <p className="mb-4 text-gray-700">{item.description}</p>
-              <div className="mb-4">
-                <strong>Price per day:</strong> ₹{item.pricePerDay}
+
+              {item.message && (
+                <p className="mb-4 text-gray-700">{item.message}</p>
+              )}
+
+              <div className="grid gap-4 mb-6 text-sm text-gray-700 md:grid-cols-2">
+                <div>
+                  <strong className="block mb-1 text-gray-900">Address</strong>
+                  <div>
+                    {item.address || item.location?.address}
+                    {item.location?.city && `, ${item.location.city}`}
+                    {item.location?.state && `, ${item.location.state}`}
+                  </div>
+                </div>
+
+                {item.navigation && (
+                  <div>
+                    <strong className="block mb-1 text-gray-900">Navigation</strong>
+                    <div>{item.navigation}</div>
+                  </div>
+                )}
+
+                {item.mobileNumber && (
+                  <div>
+                    <strong className="block mb-1 text-gray-900">Contact Number</strong>
+                    <div>{item.mobileNumber}</div>
+                  </div>
+                )}
+
+                {item.hasOwnerInfo && item.owner && (
+                  <div>
+                    <strong className="block mb-1 text-gray-900">Owner</strong>
+                    <div>{item.owner.name}</div>
+                  </div>
+                )}
               </div>
-              <div className="mb-4">
-                <strong>Location:</strong> {item.location?.address},{" "}
-                {item.location?.city}, {item.location?.state}
-              </div>
-              <div className="mb-4">
-                <strong>Owner:</strong> {item.owner?.name}
-              </div>
-              <button className="px-6 py-2 mt-4 font-semibold text-white bg-gray-800 rounded-lg shadow-md hover:bg-gray-900">
+
+              {item.dynamicAttributes && Object.keys(item.dynamicAttributes).length > 0 && (
+                <div className="mb-6">
+                  <strong className="block mb-2 text-gray-900">Details</strong>
+                  <div className="grid gap-2 text-sm md:grid-cols-2">
+                    {Object.entries(item.dynamicAttributes).map(([key, value]) => (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg"
+                      >
+                        <span className="font-medium text-gray-700">{key}</span>
+                        <span className="text-gray-800">{String(value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button className="px-6 py-2 mt-2 font-semibold text-white bg-gray-800 rounded-lg shadow-md hover:bg-gray-900">
                 Book Now
               </button>
-              {user && user.id !== item.owner?._id && (
+              {user && item.owner && user.id !== item.owner?._id && (
                 <button
-                  className="px-6 py-2 mt-4 ml-4 font-semibold text-white bg-blue-600 rounded-lg shadow-md hover:bg-blue-700"
+                  className="px-6 py-2 mt-2 ml-4 font-semibold text-white bg-blue-600 rounded-lg shadow-md hover:bg-blue-700"
                   onClick={handleChatWithOwner}
                   disabled={chatLoading}
                 >
