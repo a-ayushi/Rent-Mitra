@@ -11,7 +11,9 @@ const authService = {
   },
 
   // Verify OTP for phone login
-  verifyOtp: (phone, otp) => {
+ 
+   verifyOtp: (phone, otp) => {
+    // api already returns response.data via interceptor, so just return that
     return api.post('/api/client/auth/verifyOtp/', { otp, phoneNo: phone });
   },
 

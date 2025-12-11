@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, memo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import api from "../services/api";
 
 import {
   Visibility,
@@ -15,7 +16,45 @@ import {
   ArrowBack,
 } from "@mui/icons-material";
 
+// Memoized input field to avoid remounting and cursor loss on each render
+const InputField = memo(function InputField({
+  id,
+  name,
+  type,
+  placeholder,
+  value,
+  onChange,
+  error,
+  icon,
+  children,
+}) {
+  return (
+    <div>
+      <div className="relative group">
+        <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none transition-colors group-focus-within:text-gray-900">
+          {React.cloneElement(icon, { className: "text-gray-400 w-4 h-4" })}
+        </span>
+        <input
+          id={id}
+          name={name}
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          className={`w-full pl-9 pr-10 py-2 text-sm border rounded-lg text-gray-900 placeholder-gray-400 transition-all focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 ${
+            error ? "border-red-400 bg-red-50" : "border-gray-200 hover:border-gray-400 bg-white"
+          }`}
+        />
+        {children}
+      </div>
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+});
+
 const Register = () => {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -37,6 +76,7 @@ const Register = () => {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
+    // clear inline error for this field if present
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -46,77 +86,86 @@ const Register = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = "Required";
     if (!formData.email) newErrors.email = "Required";
-    else if (!/^\S+@\S+\.\S+$/i.test(formData.email))
-      newErrors.email = "Invalid email";
+    else if (!/^\S+@\S+\.\S+$/i.test(formData.email)) newErrors.email = "Invalid email";
     if (!formData.password) newErrors.password = "Required";
-    else if (formData.password.length < 8)
-      newErrors.password = "Min. 8 chars";
+    else if (formData.password.length < 8) newErrors.password = "Min. 8 chars";
     if (!formData.phone) newErrors.phone = "Required";
-    else if (!/^[0-9]{10}$/.test(formData.phone))
-      newErrors.phone = "10 digits";
-    if (!formData.agreeToTerms)
-      newErrors.agreeToTerms = "Required";
+    else if (!/^[0-9]{10}$/.test(formData.phone)) newErrors.phone = "10 digits";
+    if (!formData.agreeToTerms) newErrors.agreeToTerms = "Required";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!validateForm()) {
       setAlertMessage("Please fix errors");
       setAlertSeverity("error");
       return;
     }
+
     setLoading(true);
     setAlertMessage("");
-    
-    setTimeout(() => {
-      setShowOTP(true);
-      setAlertMessage("Success!");
-      setAlertSeverity("success");
+    setAlertSeverity("info");
+
+    try {
+      const userData = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        mobile_number: formData.phone.trim(),
+        facebook_id: null,
+      };
+
+      const formDataToSend = new FormData();
+      formDataToSend.append("data", JSON.stringify(userData));
+
+      const data = await api.post("/user/register", formDataToSend, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      // If backend indicates OTP flow
+      if (data && data.otpRequired) {
+        setAlertMessage(data.message || "OTP sent to your email/phone");
+        setAlertSeverity("success");
+        setShowOTP(true);
+      } else {
+        // success without OTP
+        setAlertMessage((data && data.message) || "Account created successfully");
+        setAlertSeverity("success");
+
+        // After successful registration, send user to login page
+        navigate("/login");
+      }
+    } catch (err) {
+      // Axios errors: err.response, err.request, or message
+      if (err.response && err.response.data) {
+        const resp = err.response.data;
+        // if server sent field errors mapping
+        if (resp.errors && typeof resp.errors === "object") {
+          setErrors((prev) => ({ ...prev, ...resp.errors }));
+        }
+        setAlertMessage(resp.message || "Registration failed");
+        setAlertSeverity("error");
+      } else if (err.request) {
+        // network error
+        setAlertMessage("Network error. Please check your connection and try again.");
+        setAlertSeverity("error");
+      } else {
+        setAlertMessage(err.message || "Something went wrong");
+        setAlertSeverity("error");
+      }
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   const handleSocialLogin = (provider) => {
     setAlertMessage(`${provider} login coming soon!`);
     setAlertSeverity("info");
   };
-
-  const InputField = ({
-    id,
-    name,
-    type,
-    placeholder,
-    value,
-    onChange,
-    error,
-    icon,
-    children,
-  }) => (
-    <div>
-      <div className="relative group">
-        <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none transition-colors group-focus-within:text-gray-900">
-          {React.cloneElement(icon, { className: "text-gray-400 w-4 h-4" })}
-        </span>
-        <input
-          id={id}
-          name={name}
-          type={type}
-          placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-          className={`w-full pl-9 pr-10 py-2 text-sm border rounded-lg text-gray-900 placeholder-gray-400 transition-all focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 ${
-            error ? "border-red-400 bg-red-50" : "border-gray-200 hover:border-gray-400 bg-white"
-          }`}
-        />
-        {children}
-      </div>
-      {error && (
-        <p className="mt-1 text-xs text-red-600">{error}</p>
-      )}
-    </div>
-  );
 
   if (showOTP) {
     return (
@@ -127,7 +176,7 @@ const Register = () => {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Check Your Email!</h2>
           <p className="text-gray-600 mb-6">We've sent a verification code to verify your account.</p>
-          <button 
+          <button
             onClick={() => setShowOTP(false)}
             className="text-gray-900 hover:text-gray-700 font-semibold transition-colors"
           >
@@ -143,12 +192,12 @@ const Register = () => {
       <div className="w-full max-w-3xl mb-10">
         {/* Back Button */}
         <Link
-  to="/login"
-  className="mb-3 inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
->
-  <ArrowBack className="w-4 h-4" />
-  <span>Back</span>
-</Link>
+          to="/login"
+          className="mb-3 inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <ArrowBack className="w-4 h-4" />
+          <span>Back</span>
+        </Link>
 
         {/* Main Card */}
         <div className="bg-white shadow-2xl rounded-2xl border border-gray-200 overflow-hidden transform transition-all">
@@ -253,9 +302,7 @@ const Register = () => {
                       </a>
                     </span>
                   </label>
-                  {errors.agreeToTerms && (
-                    <p className="mt-1 ml-6 text-xs text-red-600">{errors.agreeToTerms}</p>
-                  )}
+                  {errors.agreeToTerms && <p className="mt-1 ml-6 text-xs text-red-600">{errors.agreeToTerms}</p>}
                 </div>
 
                 {/* Submit */}
@@ -282,9 +329,7 @@ const Register = () => {
               {/* Divider */}
               <div className="hidden md:flex flex-col items-center justify-center px-4">
                 <div className="h-16 w-px bg-gray-200" />
-                <div className="my-3 px-2 py-1 text-xs font-bold text-gray-400 bg-gray-50 rounded-full border border-gray-200">
-                  OR
-                </div>
+                <div className="my-3 px-2 py-1 text-xs font-bold text-gray-400 bg-gray-50 rounded-full border border-gray-200">OR</div>
                 <div className="h-16 w-px bg-gray-200" />
               </div>
 
@@ -293,9 +338,7 @@ const Register = () => {
                   <div className="w-full border-t border-gray-200" />
                 </div>
                 <div className="relative flex justify-center">
-                  <span className="px-3 py-1 text-xs font-bold text-gray-400 bg-white border border-gray-200 rounded-full">
-                    OR
-                  </span>
+                  <span className="px-3 py-1 text-xs font-bold text-gray-400 bg-white border border-gray-200 rounded-full">OR</span>
                 </div>
               </div>
 
@@ -315,23 +358,20 @@ const Register = () => {
                   <Facebook className="w-4 h-4" />
                   <span>Facebook</span>
                 </button>
-                
+
                 <div className="pt-2 text-center">
                   <p className="text-xs text-gray-600">
                     Already have an account?{" "}
-                     <Link
-    to="/login"
-    className="font-bold text-gray-900 hover:underline"
-  >
-    Sign in
-  </Link>
+                    <Link to="/login" className="font-bold text-gray-900 hover:underline">
+                      Sign in
+                    </Link>
                   </p>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </div> 
     </div>
   );
 };
