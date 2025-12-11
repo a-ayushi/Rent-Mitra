@@ -408,14 +408,17 @@ const Navbar = () => {
               <div 
                 className="relative category-dropdown"
                 onMouseEnter={() => setCategoryDropdownOpen(true)}
-                onMouseLeave={() => setCategoryDropdownOpen(false)}
               >
                 <button className="flex items-center gap-1 text-sm font-semibold text-gray-700 transition-colors hover:text-gray-900">
                   ALL CATEGORIES
                   <ExpandMore className={`w-4 h-4 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {categoryDropdownOpen && (
-                  <div className="absolute left-0 z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl min-w-[600px] lg:min-w-[800px]">
+                  <div
+                    className="absolute left-0 z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl min-w-[600px] lg:min-w-[800px]"
+                    onMouseEnter={() => setCategoryDropdownOpen(true)}
+                    onMouseLeave={() => setCategoryDropdownOpen(false)}
+                  >
                     <div className="p-6 lg:p-8">
                       <div className="grid grid-cols-2 gap-6 lg:grid-cols-4 lg:gap-8">
                         {categories.map((cat) => (

@@ -7,6 +7,7 @@ import {
   VisibilityOff,
   Email as EmailIcon,
   Lock as LockIcon,
+  Google,
 } from "@mui/icons-material";
 import authService from "../services/authService";
 
@@ -60,6 +61,11 @@ const Login = () => {
       return `+${digits}`;
     }
     return value.replace(/\s+/g, "");
+  };
+
+  const handleGoogleLogin = () => {
+    const backendBase = import.meta.env.VITE_API_URL || "http://localhost:8086";
+    window.location.href = `${backendBase}/auth/login`;
   };
 
   useEffect(() => {
@@ -343,14 +349,29 @@ navigate(from, { replace: true });
               </div>
             </div>
           )}
-          <div className="mt-2 text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{" "}
-              <Link to="/register" className="font-medium text-gray-600 hover:text-gray-500">
-                Sign up
-              </Link>
-            </p>
+          {/* Social login / Google */}
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-900 bg-white border-2 border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:border-gray-300 hover:bg-gray-50 transition-all transform hover:scale-[1.01] active:scale-[0.99]"
+            >
+              <Google className="w-4 h-4" />
+              <span>Continue with Google</span>
+            </button>
           </div>
+
+          {/* Original register prompt kept for reference */}
+          {false && (
+            <div className="mt-2 text-center">
+              <p className="text-sm text-gray-600">
+                Don't have an account?{" "}
+                <Link to="/register" className="font-medium text-gray-600 hover:text-gray-500">
+                  Sign up
+                </Link>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
