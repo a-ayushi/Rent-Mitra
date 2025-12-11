@@ -25,7 +25,7 @@ import { useCity } from '../../hooks/useCity';
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const isForgotPasswordRoute = location.pathname === "/forgot-password";
   const isAuthRoute =
@@ -166,22 +166,6 @@ const Navbar = () => {
     e.preventDefault();
     if (search.trim()) navigate(`/search?q=${encodeURIComponent(search)}&city=${encodeURIComponent(city)}`);
   };
-
-  useEffect(() => {
-    const isAuthRoute =
-      location.pathname === "/login" ||
-      location.pathname === "/register" ||
-      location.pathname === "/forgot-password";
-
-    const isSearchRoute = location.pathname.startsWith("/search");
-    const isItemDetailsRoute = location.pathname.startsWith("/items/");
-
-    // Only auto-redirect to search when we are on generic pages,
-    // not on item details or auth/search routes.
-    if (city && !isAuthRoute && !isSearchRoute && !isItemDetailsRoute) {
-      navigate(`/search?city=${encodeURIComponent(city)}`);
-    }
-  }, [city, location.pathname, navigate]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -347,8 +331,15 @@ const Navbar = () => {
             {/* Login/Profile Section */}
             {isAuthenticated ? (
               <div className="flex items-center gap-2">
-                {/* Chat & Notifications - Desktop */}
-              
+                {/* Dashboard link */}
+                <button
+                  onClick={() => navigate("/dashboard")}
+                  className="hidden px-3 py-2 text-sm font-medium text-gray-700 transition-colors rounded-md lg:block hover:text-gray-900 hover:bg-gray-100"
+                >
+                  Dashboard
+                </button>
+
+                {/* Notifications - Desktop */}
                 <button 
                   onClick={() => navigate("/notifications")}
                   className="hidden p-2 text-gray-600 transition-colors rounded-md lg:block hover:text-gray-800 hover:bg-gray-100"
@@ -593,9 +584,13 @@ const Navbar = () => {
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         user={user}
-        onLogout={() => {
+        onLogout={async () => {
           setSidebarOpen(false);
-          if (typeof window !== 'undefined' && window.localStorage) window.localStorage.clear();
+          try {
+            await logout();
+          } catch (e) {
+            // ignore backend logout errors, still redirect
+          }
           if (typeof window !== 'undefined') window.location.href = '/login';
         }}
         onNavigate={(route) => {

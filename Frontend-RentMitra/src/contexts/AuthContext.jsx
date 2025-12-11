@@ -27,21 +27,32 @@ export const AuthProvider = ({ children }) => {
   }, [refreshToken]);
 
   const checkAuth = async () => {
+    const token = localStorage.getItem("token");
     try {
-      const token = localStorage.getItem("token");
       if (token) {
         const response = await api.get("/auth/me");
         // response is already unwrapped, just check for user fields
         if (response && (response.data || response._id)) {
           setUser(response.data || response);
           setIsAuthenticated(true);
+          return;
         }
+      }
+      // If no token or no valid user data, treat as logged out
+      if (!token) {
+        setUser(null);
+        setIsAuthenticated(false);
       }
     } catch (error) {
       console.error("Auth check failed:", error);
-      localStorage.removeItem("token");
-      setUser(null);
-      setIsAuthenticated(false);
+      // If a token still exists, keep the user marked as authenticated
+      // so the UI reflects the stored session; backend will still enforce JWT.
+      if (token) {
+        setIsAuthenticated(true);
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
     } finally {
       setLoading(false);
     }
@@ -57,19 +68,23 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       return { token: credentials.token, user: credentials.user || null };
     }
-    // Email/password login: call backend
+
+    // Email/password login: call backend once via authService
     try {
-      const data = await api.post("/auth/login", credentials); // already unwrapped
+      const data = await authService.login(credentials); // api already unwraps response.data
       if (data && data.token && data.user) {
         localStorage.setItem("token", data.token);
         setUser(data.user);
         setIsAuthenticated(true);
+        if (data.refreshToken) {
+          setRefreshToken(data.refreshToken);
+        }
         return data;
       } else {
-        throw new Error(data.error || "Login failed");
+        throw new Error(data?.error || "Login failed");
       }
     } catch (error) {
-      localStorage.removeItem("token");
+      // Keep any existing token; only reset in-memory auth flags.
       setUser(null);
       setIsAuthenticated(false);
       throw error;

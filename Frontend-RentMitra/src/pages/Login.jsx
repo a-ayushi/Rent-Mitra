@@ -31,9 +31,17 @@ const Login = () => {
     return () => clearTimeout(timer);
   }, [resendTimer]);
 
+  // Clear any existing auth tokens when visiting the login page
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+    }
+  }, []);
+
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isAuthenticated, setRefreshToken } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -82,12 +90,11 @@ const Login = () => {
         email: data.email,
         password: data.password,
       };
-      const response = await authService.login(credentials);
-      if (response.data && response.data.refreshToken) {
-        setRefreshToken(response.data.refreshToken);
+      await login(credentials); // single login call via AuthContext
+      navigate(from, { replace: true });
+      if (typeof window !== 'undefined') {
+        window.location.reload();
       }
-      await login(credentials);
-navigate(from, { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || err.message || "Failed to login");
     } finally {
@@ -273,6 +280,9 @@ navigate(from, { replace: true });
                         // Store JWT and mark user as logged in
                         await login({ token: resp.jwt });
                         navigate("/");
+                        if (typeof window !== 'undefined') {
+                          window.location.reload();
+                        }
                       } else {
                         setOtpError(resp.message || "Invalid OTP");
                       }
