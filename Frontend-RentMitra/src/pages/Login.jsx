@@ -7,6 +7,7 @@ import {
   VisibilityOff,
   Email as EmailIcon,
   Lock as LockIcon,
+  Google,
 } from "@mui/icons-material";
 import authService from "../services/authService";
 
@@ -32,7 +33,7 @@ const Login = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isAuthenticated, setRefreshToken } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -62,11 +63,44 @@ const Login = () => {
     return value.replace(/\s+/g, "");
   };
 
+  const handleGoogleLogin = () => {
+    const backendBase = import.meta.env.VITE_API_URL || "http://localhost:8086";
+    window.location.href = `${backendBase}/oauth2/authorization/google`;
+  };
+
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate(from, { replace: true });
-    }
-  }, [isAuthenticated, navigate, from]);
+    const params = new URLSearchParams(location.search);
+    const googleToken = params.get("googleToken");
+    const email = params.get("email");
+
+    if (!googleToken) return;
+
+    const handleGoogleCallback = async () => {
+      try {
+        setError("");
+        setLoading(true);
+        await login({
+          token: googleToken,
+          user: {
+            email: email || "",
+            authorities: [],
+          },
+        });
+        const target = from || "/";
+        if (typeof window !== "undefined") {
+          window.location.href = target;
+        } else {
+          navigate(target, { replace: true });
+        }
+      } catch (err) {
+        setError(err?.message || "Google login failed");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    handleGoogleCallback();
+  }, [location.search, from, login, navigate]);
 
   const onSubmit = async (data) => {
     try {
@@ -76,12 +110,11 @@ const Login = () => {
         email: data.email,
         password: data.password,
       };
-      const response = await authService.login(credentials);
-      if (response.data && response.data.refreshToken) {
-        setRefreshToken(response.data.refreshToken);
+      await login(credentials); // single login call via AuthContext
+      navigate(from, { replace: true });
+      if (typeof window !== 'undefined') {
+        window.location.reload();
       }
-      await login(credentials);
-navigate(from, { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || err.message || "Failed to login");
     } finally {
@@ -267,6 +300,9 @@ navigate(from, { replace: true });
                         // Store JWT and mark user as logged in
                         await login({ token: resp.jwt });
                         navigate("/");
+                        if (typeof window !== 'undefined') {
+                          window.location.reload();
+                        }
                       } else {
                         setOtpError(resp.message || "Invalid OTP");
                       }
@@ -343,14 +379,29 @@ navigate(from, { replace: true });
               </div>
             </div>
           )}
-          <div className="mt-2 text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{" "}
-              <Link to="/register" className="font-medium text-gray-600 hover:text-gray-500">
-                Sign up
-              </Link>
-            </p>
+          {/* Social login / Google */}
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-900 bg-white border-2 border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:border-gray-300 hover:bg-gray-50 transition-all transform hover:scale-[1.01] active:scale-[0.99]"
+            >
+              <Google className="w-4 h-4" />
+              <span>Continue with Google</span>
+            </button>
           </div>
+
+          {/* Original register prompt kept for reference */}
+          {false && (
+            <div className="mt-2 text-center">
+              <p className="text-sm text-gray-600">
+                Don't have an account?{" "}
+                <Link to="/register" className="font-medium text-gray-600 hover:text-gray-500">
+                  Sign up
+                </Link>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

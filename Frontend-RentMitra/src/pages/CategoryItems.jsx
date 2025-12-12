@@ -87,33 +87,15 @@ const CategoryItems = () => {
     try {
       setLoading(true);
       setError(null);
-      const params = {
-        page,
-        limit,
-        includeSubcategories: "true",
-        sortBy,
-        sortOrder,
-        minPrice: filters.minPrice || undefined,
-        maxPrice: filters.maxPrice || undefined,
-        condition: filters.condition.length
-          ? filters.condition.join(",")
-          : undefined,
-        search: filters.searchQuery || undefined,
-        city: city || undefined,
-      };
-      Object.keys(params).forEach(
-        (key) => params[key] === undefined && delete params[key]
-      );
-      const data = await api.get(`/categories/${id}/items`, { params });
-      if (data && data.items) {
+      const data = await itemService.getItemsByCategory(id);
+
+      if (data && Array.isArray(data.items)) {
         setItems(data.items);
-        setCategory(data.category);
-        setTotalPages(data.totalPages);
-        setTotalItems(data.totalItems);
+        setTotalPages(1);
+        setTotalItems(data.items.length);
       } else {
-        console.error("Malformed response:", data);
+        console.error("Malformed response from getItemsByCategory:", data);
         setItems([]);
-        setCategory(null);
         setTotalPages(1);
         setTotalItems(0);
       }
@@ -558,7 +540,7 @@ const CategoryItems = () => {
                 <div
                   className={
                     viewMode === "grid"
-                      ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                      ? "grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
                       : "space-y-4"
                   }
                 >

@@ -25,7 +25,7 @@ import { useCity } from '../../hooks/useCity';
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const isForgotPasswordRoute = location.pathname === "/forgot-password";
   const isAuthRoute =
@@ -166,22 +166,6 @@ const Navbar = () => {
     e.preventDefault();
     if (search.trim()) navigate(`/search?q=${encodeURIComponent(search)}&city=${encodeURIComponent(city)}`);
   };
-
-  useEffect(() => {
-    const isAuthRoute =
-      location.pathname === "/login" ||
-      location.pathname === "/register" ||
-      location.pathname === "/forgot-password";
-
-    const isSearchRoute = location.pathname.startsWith("/search");
-    const isItemDetailsRoute = location.pathname.startsWith("/items/");
-
-    // Only auto-redirect to search when we are on generic pages,
-    // not on item details or auth/search routes.
-    if (city && !isAuthRoute && !isSearchRoute && !isItemDetailsRoute) {
-      navigate(`/search?city=${encodeURIComponent(city)}`);
-    }
-  }, [city, location.pathname, navigate]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -347,8 +331,15 @@ const Navbar = () => {
             {/* Login/Profile Section */}
             {isAuthenticated ? (
               <div className="flex items-center gap-2">
-                {/* Chat & Notifications - Desktop */}
-              
+                {/* Dashboard link */}
+                <button
+                  onClick={() => navigate("/dashboard")}
+                  className="hidden px-3 py-2 text-sm font-medium text-gray-700 transition-colors rounded-md lg:block hover:text-gray-900 hover:bg-gray-100"
+                >
+                  Dashboard
+                </button>
+
+                {/* Notifications - Desktop */}
                 <button 
                   onClick={() => navigate("/notifications")}
                   className="hidden p-2 text-gray-600 transition-colors rounded-md lg:block hover:text-gray-800 hover:bg-gray-100"
@@ -408,35 +399,40 @@ const Navbar = () => {
               <div 
                 className="relative category-dropdown"
                 onMouseEnter={() => setCategoryDropdownOpen(true)}
-                onMouseLeave={() => setCategoryDropdownOpen(false)}
               >
                 <button className="flex items-center gap-1 text-sm font-semibold text-gray-700 transition-colors hover:text-gray-900">
                   ALL CATEGORIES
                   <ExpandMore className={`w-4 h-4 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {categoryDropdownOpen && (
-                  <div className="absolute left-0 z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl min-w-[600px] lg:min-w-[800px]">
+                  <div
+                    className="absolute left-0 z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl min-w-[600px] lg:min-w-[800px]"
+                    onMouseEnter={() => setCategoryDropdownOpen(true)}
+                    onMouseLeave={() => setCategoryDropdownOpen(false)}
+                  >
                     <div className="p-6 lg:p-8">
                       <div className="grid grid-cols-2 gap-6 lg:grid-cols-4 lg:gap-8">
                         {categories.map((cat) => (
-                          <div key={cat._id}>
+                          <div key={cat.categoryId || cat._id}>
                             <h3 
                               className="mb-3 text-sm font-bold text-gray-800 transition-colors cursor-pointer hover:text-gray-900"
                               onClick={() => {
                                 setCategoryDropdownOpen(false);
-                                navigate(`/category/${cat.slug || cat._id}`);
+                                // Use Java categoryId for navigation so /category/:id is always a valid numeric id
+                                navigate(`/category/${cat.categoryId}`);
                               }}
                             >
                               {cat.name}
                             </h3>
                             <ul className="space-y-2">
                               {cat.subcategories?.slice(0, 5).map(sub => (
-                                <li key={sub._id}>
+                                <li key={sub.subcategoryId || sub._id}>
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setCategoryDropdownOpen(false);
-                                      navigate(`/category/${sub.slug || sub._id}`);
+                                      // For now, also navigate with subcategoryId so it is never undefined
+                                      navigate(`/category/${sub.subcategoryId || sub._id}`);
                                     }}
                                     className="text-xs text-gray-600 transition-colors hover:text-gray-900 hover:underline"
                                   >
@@ -455,8 +451,8 @@ const Navbar = () => {
               <div className="flex gap-4 overflow-x-auto lg:gap-6">
                 {categories.slice(0, 6).map((cat, index) => (
                   <button
-                    key={cat._id || cat.id || `${cat.name || 'cat'}-${index}`}
-                    onClick={() => navigate(`/category/${cat.slug || cat._id}`)}
+                    key={cat.categoryId || cat._id || cat.id || `${cat.name || 'cat'}-${index}`}
+                    onClick={() => navigate(`/category/${cat.categoryId}`)}
                     className="py-1 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900 whitespace-nowrap"
                   >
                     {cat.name}
@@ -541,9 +537,9 @@ const Navbar = () => {
                   <div className="grid grid-cols-2 gap-2">
                     {categories.slice(0, 8).map((cat) => (
                       <button
-                        key={cat._id}
+                        key={cat.categoryId || cat._id}
                         onClick={() => {
-                          navigate(`/category/${cat.slug || cat._id}`);
+                          navigate(`/category/${cat.categoryId}`);
                           setMobileMenuOpen(false);
                         }}
                         className="px-3 py-2 text-sm text-left text-gray-600 transition-colors rounded-md hover:text-gray-900 hover:bg-gray-50"
@@ -590,9 +586,13 @@ const Navbar = () => {
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         user={user}
-        onLogout={() => {
+        onLogout={async () => {
           setSidebarOpen(false);
-          if (typeof window !== 'undefined' && window.localStorage) window.localStorage.clear();
+          try {
+            await logout();
+          } catch (e) {
+            // ignore backend logout errors, still redirect
+          }
           if (typeof window !== 'undefined') window.location.href = '/login';
         }}
         onNavigate={(route) => {

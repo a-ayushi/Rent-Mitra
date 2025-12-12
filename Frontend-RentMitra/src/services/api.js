@@ -14,7 +14,12 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    if (token) {
+
+    // Do NOT send auth header for public product routes
+    const url = config.url || '';
+    const isPublicProductRoute = url.startsWith('/api/products/');
+
+    if (token && !isPublicProductRoute) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -28,11 +33,9 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
+    // Let callers (AuthContext, components) decide how to handle 401s.
+    // We no longer clear the token or force a redirect globally here,
+    // to avoid instantly logging the user out on any protected API error.
     return Promise.reject(error);
   }
 );

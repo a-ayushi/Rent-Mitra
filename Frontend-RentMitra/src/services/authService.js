@@ -22,7 +22,8 @@ const authService = {
   },
 
   logout: (refreshToken) => {
-    return api.post('/auth/logout', { refreshToken });
+    // Call dedicated client logout endpoint
+    return api.post('http://localhost:8089/api/client/auth/logout', { refreshToken });
   },
 
   forgotPassword: (emailOrPhone) => {
@@ -39,6 +40,10 @@ const authService = {
 
   getProfile: () => {
     return api.get('/users/profile');
+  },
+
+  googleLogin: () => {
+    return api.get('/auth/login');
   }
 };
 
