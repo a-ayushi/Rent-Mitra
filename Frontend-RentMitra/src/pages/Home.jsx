@@ -76,8 +76,9 @@ const Home = () => {
       })
   );
 
-  const handleCategoryClick = (categoryId, categorySlug) => {
-    navigate(`/category/${categorySlug || categoryId}`);
+  const handleCategoryClick = (categoryId) => {
+    // Always navigate with numeric backend categoryId so CategoryItems can call get-products-by-category correctly
+    navigate(`/category/${categoryId}`);
   };
 
   return (
@@ -108,7 +109,7 @@ const Home = () => {
             {categoryGrid.map((cat) => (
               <button
                 key={cat._id}
-                onClick={() => handleCategoryClick(cat._id, cat.slug)}
+                onClick={() => handleCategoryClick(cat._id)}
                 className="flex flex-col items-center w-full p-8 shadow bg-gray-50 hover:bg-gray-100 rounded-xl group"
               >
                 <span className="mb-4 text-5xl transition-transform transform group-hover:scale-110">

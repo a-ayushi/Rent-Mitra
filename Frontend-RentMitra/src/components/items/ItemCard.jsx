@@ -70,13 +70,13 @@ const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = fal
     <div
       onClick={handleCardClick}
       role="button"
-      className="flex flex-col overflow-hidden transition-shadow duration-300 bg-white shadow-md cursor-pointer rounded-xl hover:shadow-xl group"
+      className="flex flex-col overflow-hidden transition-all duration-300 bg-white border border-gray-100 rounded-xl shadow-sm cursor-pointer group hover:shadow-xl hover:-translate-y-0.5"
     >
-      <div className="relative">
+      <div className="relative flex items-center justify-center w-full h-40 bg-gray-50">
         <img
           src={item.mainImage || item.images?.[0]?.url || '/placeholder.jpg'}
           alt={item.title || item.name || 'Product'}
-          className="object-cover w-full h-56 transition-transform duration-300 group-hover:scale-105"
+          className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
         />
 
         {item.featured?.isFeatured && (
@@ -100,9 +100,9 @@ const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = fal
         </button>
       </div>
 
-      <div className="flex flex-col flex-grow p-4">
+      <div className="flex flex-col flex-grow px-3.5 pt-2.5 pb-3.5">
         {/* Price on top */}
-        <div className="mb-1 text-xl font-bold text-gray-900">
+        <div className="mb-1 text-lg font-bold text-gray-900">
           {typeof item.pricePerDay === 'number' ? (
             <span>
               ₹{item.pricePerDay}
@@ -114,12 +114,12 @@ const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = fal
         </div>
 
         {/* Product name under price */}
-        <h3 className="mb-2 text-sm font-medium text-gray-800 line-clamp-2">
+        <h3 className="mb-1.5 text-[13px] font-medium text-gray-800 line-clamp-2">
           {item.title || item.name || 'Untitled'}
         </h3>
 
         {/* Location + date row at the bottom, subtle like OLX */}
-        <div className="mt-auto pt-2 border-t border-gray-100 text-xs text-gray-500">
+        <div className="mt-auto pt-2 border-t border-gray-100 text-[11px] text-gray-500">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center truncate">
               <LocationIcon className="w-4 h-4 mr-1 flex-shrink-0" />

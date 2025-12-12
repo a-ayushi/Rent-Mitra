@@ -413,24 +413,26 @@ const Navbar = () => {
                     <div className="p-6 lg:p-8">
                       <div className="grid grid-cols-2 gap-6 lg:grid-cols-4 lg:gap-8">
                         {categories.map((cat) => (
-                          <div key={cat._id}>
+                          <div key={cat.categoryId || cat._id}>
                             <h3 
                               className="mb-3 text-sm font-bold text-gray-800 transition-colors cursor-pointer hover:text-gray-900"
                               onClick={() => {
                                 setCategoryDropdownOpen(false);
-                                navigate(`/category/${cat.slug || cat._id}`);
+                                // Use Java categoryId for navigation so /category/:id is always a valid numeric id
+                                navigate(`/category/${cat.categoryId}`);
                               }}
                             >
                               {cat.name}
                             </h3>
                             <ul className="space-y-2">
                               {cat.subcategories?.slice(0, 5).map(sub => (
-                                <li key={sub._id}>
+                                <li key={sub.subcategoryId || sub._id}>
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setCategoryDropdownOpen(false);
-                                      navigate(`/category/${sub.slug || sub._id}`);
+                                      // For now, also navigate with subcategoryId so it is never undefined
+                                      navigate(`/category/${sub.subcategoryId || sub._id}`);
                                     }}
                                     className="text-xs text-gray-600 transition-colors hover:text-gray-900 hover:underline"
                                   >
@@ -449,8 +451,8 @@ const Navbar = () => {
               <div className="flex gap-4 overflow-x-auto lg:gap-6">
                 {categories.slice(0, 6).map((cat, index) => (
                   <button
-                    key={cat._id || cat.id || `${cat.name || 'cat'}-${index}`}
-                    onClick={() => navigate(`/category/${cat.slug || cat._id}`)}
+                    key={cat.categoryId || cat._id || cat.id || `${cat.name || 'cat'}-${index}`}
+                    onClick={() => navigate(`/category/${cat.categoryId}`)}
                     className="py-1 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900 whitespace-nowrap"
                   >
                     {cat.name}
@@ -535,9 +537,9 @@ const Navbar = () => {
                   <div className="grid grid-cols-2 gap-2">
                     {categories.slice(0, 8).map((cat) => (
                       <button
-                        key={cat._id}
+                        key={cat.categoryId || cat._id}
                         onClick={() => {
-                          navigate(`/category/${cat.slug || cat._id}`);
+                          navigate(`/category/${cat.categoryId}`);
                           setMobileMenuOpen(false);
                         }}
                         className="px-3 py-2 text-sm text-left text-gray-600 transition-colors rounded-md hover:text-gray-900 hover:bg-gray-50"

@@ -52,7 +52,7 @@ const Search = () => {
   }, [city]);
 
   const [page, setPage] = useState(1);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false); // no longer used visually but kept for potential future use
   const [mapView, setMapView] = useState(false);
   const debouncedSearch = useDebounce(filters.search, 500);
   const [selectedCategory, setSelectedCategory] = useState(filters.category);
@@ -222,27 +222,21 @@ const Search = () => {
       <div className="container px-4 py-8 mx-auto sm:px-6 lg:px-8">
         {/* Search Header */}
         <div className="p-4 mb-8 bg-white shadow-lg rounded-2xl">
-          <div className="flex flex-col gap-4 md:flex-row">
-            <div className="relative flex-grow">
+          <div className="flex flex-col items-center gap-4 md:flex-row">
+            <div className="relative flex-grow w-full max-w-2xl mx-auto">
               <SearchIcon className="absolute top-3.5 left-4 h-5 w-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search for items..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange("search", e.target.value)}
-                className="w-full py-3 pl-12 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                className="w-full py-3 pl-12 pr-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-800"
               />
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setDrawerOpen(true)}
-                className="flex items-center gap-2 px-4 py-3 font-semibold text-gray-800 bg-gray-200 rounded-lg md:hidden"
-              >
-                <FilterIcon /> Filters
-              </button>
-              <button
                 onClick={() => setMapView(!mapView)}
-                className="flex items-center gap-2 px-4 py-3 font-semibold text-gray-800 bg-gray-200 rounded-lg"
+                className="flex items-center gap-2 px-4 py-3 text-sm font-semibold text-gray-800 bg-gray-100 rounded-full shadow-sm hover:bg-gray-200"
               >
                 {mapView ? (
                   <>
@@ -258,14 +252,9 @@ const Search = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
-          {/* Filters Sidebar */}
-          <aside className="hidden lg:block lg:col-span-1">
-            <FilterPanel />
-          </aside>
-
+        <div className="flex flex-col gap-8">
           {/* Results */}
-          <main className="lg:col-span-3">
+          <main>
             {isLoading ? (
               <div className="p-12 text-center">
                 <span className="text-lg">Loading...</span>
@@ -277,15 +266,9 @@ const Search = () => {
             ) : data?.items?.length === 0 ? (
               <div className="p-12 text-center bg-white shadow-lg rounded-2xl">
                 <h3 className="mb-2 text-2xl font-bold">No items found</h3>
-                <p className="mb-4 text-gray-600">
-                  Try adjusting your search or filters.
+                <p className="mb-2 text-gray-600">
+                  Try a different search term.
                 </p>
-                <button
-                  onClick={handleClearFilters}
-                  className="px-4 py-2 font-bold text-white bg-gray-800 rounded-lg"
-                >
-                  Clear Filters
-                </button>
               </div>
             ) : (
               <>
@@ -300,7 +283,7 @@ const Search = () => {
                     />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {data?.items?.map((item) => (
                       <ItemCard item={item} key={item._id} />
                     ))}
@@ -314,29 +297,6 @@ const Search = () => {
               </>
             )}
           </main>
-        </div>
-      </div>
-
-      {/* Mobile Filter Drawer */}
-      {drawerOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black bg-opacity-50"
-          onClick={() => setDrawerOpen(false)}
-        ></div>
-      )}
-      <div
-        className={`fixed top-0 right-0 h-full bg-white w-80 shadow-2xl transform transition-transform duration-300 z-50 ${
-          drawerOpen ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        <div className="p-4">
-          <button
-            onClick={() => setDrawerOpen(false)}
-            className="absolute text-gray-500 top-4 right-4"
-          >
-            <ClearIcon />
-          </button>
-          <FilterPanel />
         </div>
       </div>
     </div>

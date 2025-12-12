@@ -36,6 +36,30 @@ const itemService = {
     };
   },
 
+  // Get items for a specific category (Java products API)
+  getItemsByCategory: async (categoryId) => {
+    const products = await api.get('/api/products/get-products-by-category', {
+      params: { categoryId },
+    });
+
+    const rawItems = Array.isArray(products) ? products : [];
+
+    const items = rawItems.map((p) => ({
+      ...p,
+      _id: p.productId ?? p._id,
+      mainImage: Array.isArray(p.imageUrls) && p.imageUrls.length > 0 ? p.imageUrls[0] : undefined,
+      pricePerDay: p.rentBasedOnType ?? p.pricePerDay,
+      location: p.address
+        ? {
+            city: p.address,
+          }
+        : p.location,
+      isAvailable: typeof p.isAvailable === 'boolean' ? p.isAvailable : true,
+    }));
+
+    return { items };
+  },
+
   // Get single item (Java products API)
   getItem: async (id) => {
     const p = await api.get(`/api/products/get-by-id?productId=${id}`);
