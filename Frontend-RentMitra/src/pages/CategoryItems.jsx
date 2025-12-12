@@ -640,16 +640,16 @@ const ItemCard = ({ item, isFavorite, onToggleFavorite }) => {
   };
 
   return (
-    <div className="overflow-hidden transition-all duration-300 bg-white shadow-sm rounded-xl hover:shadow-xl group">
-      <div className="relative bg-gray-100 aspect-w-4 aspect-h-3">
+    <div className="overflow-hidden transition-all duration-300 bg-white shadow-sm rounded-xl hover:shadow-lg group">
+      <div className="relative bg-gray-100">
         {item.images && item.images.length > 0 ? (
           <img
             src={item.images[0].url}
             alt={item.name}
-            className="object-cover w-full h-56 transition-transform duration-500 group-hover:scale-110"
+            className="object-cover w-full h-44 md:h-48 transition-transform duration-500 group-hover:scale-110"
           />
         ) : (
-          <div className="flex items-center justify-center w-full h-56 text-gray-300 bg-gray-100">
+          <div className="flex items-center justify-center w-full h-44 md:h-48 text-gray-300 bg-gray-100">
             <Grid3x3GapFill size={48} />
           </div>
         )}
@@ -682,15 +682,15 @@ const ItemCard = ({ item, isFavorite, onToggleFavorite }) => {
         )}
       </div>
 
-      <div className="p-5">
-        <h3 className="mb-2 text-lg font-bold text-gray-800 transition-colors line-clamp-2 group-hover:text-gray-900">
+      <div className="px-4 py-3">
+        <h3 className="mb-1 text-base font-semibold text-gray-800 transition-colors line-clamp-2 group-hover:text-gray-900">
           {item.name}
         </h3>
-        <p className="mb-4 text-sm text-gray-600 line-clamp-2">
+        <p className="mb-3 text-xs text-gray-600 line-clamp-2">
           {item.description}
         </p>
 
-        <div className="flex items-center gap-4 mb-4 text-sm text-gray-500">
+        <div className="flex items-center gap-3 mb-3 text-xs text-gray-500">
           {item.location?.city && (
             <div className="flex items-center gap-1.5">
               <GeoAlt size={14} className="text-gray-500" />
@@ -709,12 +709,12 @@ const ItemCard = ({ item, isFavorite, onToggleFavorite }) => {
           )}
         </div>
 
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
           <div>
-            <span className="text-3xl font-bold text-gray-800">
+            <span className="text-2xl font-bold text-gray-800">
               ₹{item.pricePerDay}
             </span>
-            <span className="ml-1 text-sm text-gray-500">/day</span>
+            <span className="ml-1 text-xs text-gray-500">/day</span>
           </div>
           <Link
             to={`/items/${item._id}`}

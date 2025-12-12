@@ -52,6 +52,10 @@ const ItemDetails = () => {
     }
   };
 
+  const createdAtText = item?.createdAt
+    ? new Date(item.createdAt).toLocaleDateString()
+    : null;
+
   if (loading) return <div className="p-12 text-center">Loading item...</div>;
   if (error || !item)
     return (
@@ -93,26 +97,30 @@ const ItemDetails = () => {
         <div className="max-w-4xl p-8 mx-auto bg-white shadow-xl rounded-2xl">
           <div className="flex flex-col gap-8 md:flex-row">
             <div className="flex-shrink-0 w-full md:w-1/2">
-              {item.images && item.images.length > 0 ? (
-                <img
-                  src={item.images[0].url}
-                  alt={item.name}
-                  className="object-cover w-full rounded-lg h-72"
-                />
-              ) : (
-                <div className="w-full bg-gray-200 rounded-lg h-72" />
-              )}
-              <div className="flex gap-2 mt-2">
+              <div className="w-full h-80 overflow-hidden bg-gray-100 rounded-2xl md:h-96">
+                {item.images && item.images.length > 0 ? (
+                  <img
+                    src={item.images[0].url}
+                    alt={item.name}
+                    className="object-contain w-full h-full"
+                  />
+                ) : null}
+              </div>
+              <div className="flex gap-2 mt-3">
                 {item.images &&
                   item.images
                     .slice(1)
                     .map((img, idx) => (
-                      <img
+                      <div
                         key={idx}
-                        src={img.url}
-                        alt="thumb"
-                        className="object-cover w-16 h-16 rounded"
-                      />
+                        className="w-20 h-20 overflow-hidden bg-white border border-gray-200 rounded-xl"
+                      >
+                        <img
+                          src={img.url}
+                          alt="thumb"
+                          className="object-contain w-full h-full"
+                        />
+                      </div>
                     ))}
               </div>
             </div>
@@ -123,6 +131,11 @@ const ItemDetails = () => {
                 <span className="flex items-center">
                   <Visibility className="mr-1" /> {views} views
                 </span>
+                {createdAtText && (
+                  <span className="text-xs text-gray-500">
+                    Added on {createdAtText}
+                  </span>
+                )}
                 {item.rentType && (
                   <span className="px-2 py-1 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
                     Rent type: {item.rentType}

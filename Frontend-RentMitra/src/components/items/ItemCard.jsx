@@ -62,9 +62,14 @@ const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = fal
     ? `${item.location.city}, ${item.location.state}`
     : item.location?.city || item.location?.state || item.location?.country || 'Unknown';
 
-  const createdAtText = item.createdAt
-    ? new Date(item.created_at).toLocaleDateString()
-    : null;
+  let createdAtText = null;
+  const rawCreatedAt = item.createdAt || item.created_at;
+  if (rawCreatedAt) {
+    const d = new Date(rawCreatedAt);
+    if (!isNaN(d.getTime())) {
+      createdAtText = d.toLocaleDateString();
+    }
+  }
 
   return (
     <div
@@ -72,11 +77,11 @@ const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = fal
       role="button"
       className="flex flex-col overflow-hidden transition-all duration-300 bg-white border border-gray-100 rounded-xl shadow-sm cursor-pointer group hover:shadow-xl hover:-translate-y-0.5"
     >
-      <div className="relative flex items-center justify-center w-full h-40 bg-gray-50">
+      <div className="relative w-full h-48 overflow-hidden bg-gray-100 md:h-56 rounded-t-xl">
         <img
           src={item.mainImage || item.images?.[0]?.url || '/placeholder.jpg'}
           alt={item.title || item.name || 'Product'}
-          className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+          className="object-contain w-full h-full transition-transform duration-300 group-hover:scale-105"
         />
 
         {item.featured?.isFeatured && (

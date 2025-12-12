@@ -47,7 +47,12 @@ const itemService = {
     const items = rawItems.map((p) => ({
       ...p,
       _id: p.productId ?? p._id,
+      // Main image used by some cards
       mainImage: Array.isArray(p.imageUrls) && p.imageUrls.length > 0 ? p.imageUrls[0] : undefined,
+      // Full images array used by CategoryItems cards (expects images[0].url)
+      images: Array.isArray(p.imageUrls)
+        ? p.imageUrls.map((url) => ({ url }))
+        : p.images,
       pricePerDay: p.rentBasedOnType ?? p.pricePerDay,
       location: p.address
         ? {
