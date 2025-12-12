@@ -31,14 +31,6 @@ const Login = () => {
     return () => clearTimeout(timer);
   }, [resendTimer]);
 
-  // Clear any existing auth tokens when visiting the login page
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-    }
-  }, []);
-
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isAuthenticated } = useAuth();
@@ -73,14 +65,42 @@ const Login = () => {
 
   const handleGoogleLogin = () => {
     const backendBase = import.meta.env.VITE_API_URL || "http://localhost:8086";
-    window.location.href = `${backendBase}/auth/login`;
+    window.location.href = `${backendBase}/oauth2/authorization/google`;
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate(from, { replace: true });
-    }
-  }, [isAuthenticated, navigate, from]);
+    const params = new URLSearchParams(location.search);
+    const googleToken = params.get("googleToken");
+    const email = params.get("email");
+
+    if (!googleToken) return;
+
+    const handleGoogleCallback = async () => {
+      try {
+        setError("");
+        setLoading(true);
+        await login({
+          token: googleToken,
+          user: {
+            email: email || "",
+            authorities: [],
+          },
+        });
+        const target = from || "/";
+        if (typeof window !== "undefined") {
+          window.location.href = target;
+        } else {
+          navigate(target, { replace: true });
+        }
+      } catch (err) {
+        setError(err?.message || "Google login failed");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    handleGoogleCallback();
+  }, [location.search, from, login, navigate]);
 
   const onSubmit = async (data) => {
     try {

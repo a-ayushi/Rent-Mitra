@@ -40,6 +40,10 @@ const authService = {
 
   getProfile: () => {
     return api.get('/users/profile');
+  },
+
+  googleLogin: () => {
+    return api.get('/auth/login');
   }
 };
 

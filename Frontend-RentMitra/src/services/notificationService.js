@@ -9,7 +9,13 @@ class NotificationService {
   connect(userId) {
     if (this.socket) return;
 
-    this.socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:8086', {
+    const socketUrl = import.meta.env.VITE_SOCKET_URL;
+    if (!socketUrl) {
+      // Notifications backend is not configured; skip connecting to avoid CORS/401 noise.
+      return;
+    }
+
+    this.socket = io(socketUrl, {
       auth: {
         token: localStorage.getItem('accessToken')
       }

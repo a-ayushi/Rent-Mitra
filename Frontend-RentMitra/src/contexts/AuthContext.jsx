@@ -31,9 +31,8 @@ export const AuthProvider = ({ children }) => {
     try {
       if (token) {
         const response = await api.get("/auth/me");
-        // response is already unwrapped, just check for user fields
-        if (response && (response.data || response._id)) {
-          setUser(response.data || response);
+        // /auth/me returns a simple object like { authenticated: true, ... }
+        if (response && response.authenticated) {
           setIsAuthenticated(true);
           return;
         }
