@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import api from "../services/api";
+import categoryService from "../services/categoryService";
 import {
   CloudUpload,
   Delete,
@@ -68,25 +69,20 @@ const AddItem = () => {
   const watchedValues = watch();
   const selectedCategory = watch("category");
 
-
   const fetchCategories = useCallback(async () => {
     try {
-      const response = await api.get("/categories");
-      const mainCategories = response.filter((cat) => !cat.parentCategory);
-      setCategories(mainCategories);
+      const res = await categoryService.getCategories();
+      const arr = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res?.categories)
+            ? res.categories
+            : [];
+      setCategories(Array.isArray(arr) ? arr : []);
     } catch (error) {
       console.error("Error fetching categories:", error);
-    }
-  }, []);
-
-
-  const fetchSubcategories = useCallback(async (categoryId) => {
-    try {
-      const response = await api.get(`/categories/${categoryId}/subcategories`);
-      setSubcategories(response || []);
-    } catch (error) {
-      console.error("Error fetching subcategories:", error);
-      setSubcategories([]);
+      setCategories([]);
     }
   }, []);
 
@@ -95,14 +91,18 @@ const AddItem = () => {
   }, [fetchCategories]);
 
   useEffect(() => {
-    if (selectedCategory) {
-      fetchSubcategories(selectedCategory);
-      setValue("subcategory", "");
-    } else {
+    if (!selectedCategory) {
       setSubcategories([]);
       setValue("subcategory", "");
+      return;
     }
-  }, [selectedCategory, setValue, fetchSubcategories]);
+
+    const categoryObj = (Array.isArray(categories) ? categories : []).find(
+      (cat) => String(cat.categoryId ?? cat._id) === String(selectedCategory)
+    );
+    setSubcategories(Array.isArray(categoryObj?.subcategories) ? categoryObj.subcategories : []);
+    setValue("subcategory", "");
+  }, [selectedCategory, setValue, categories]);
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
@@ -151,43 +151,58 @@ const AddItem = () => {
   const onSubmit = async (data) => {
     setLoading(true);
     setSubmitError("");
-    const formData = new FormData();
-
-
-
-    // Remove location fields from top-level
-    const dataCopy = { ...data };
-    delete dataCopy.address;
-    delete dataCopy.city;
-    delete dataCopy.state;
-    delete dataCopy.zipCode;
-
-    // Append all other fields
-    Object.entries(dataCopy).forEach(([key, value]) => {
-      if (value)
-        formData.append(
-          key,
-          Array.isArray(value) ? JSON.stringify(value) : value
-        );
-    });
-    // Add 'title' field for backend validation
-    formData.append('title', data.name);
-    // Append location fields as nested keys for backend validator
-    formData.append("location.address", data.address);
-    formData.append("location.city", data.city);
-    formData.append("location.state", data.state);
-    formData.append("location.pincode", data.zipCode);
-
-    // Append images
-    imageFiles.forEach((file) => formData.append("images", file));
-
     try {
-      const response = await api.post("/items", formData, {
+      const formData = new FormData();
+
+      // Controller expects @RequestParam("files") List<MultipartFile>
+      imageFiles.forEach((file) => formData.append("files", file));
+
+      // Map AddItem form -> Java ProductRequest
+      const categoryId = data.category ? Number(data.category) : undefined;
+      const subcategoryId = data.subcategory ? Number(data.subcategory) : undefined;
+
+      const addressString = [
+        data.address,
+        data.city,
+        data.state,
+        data.zipCode ? `- ${data.zipCode}` : undefined,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      const productRequest = {
+        name: data.name,
+        brand: data.brand || undefined,
+        categoryId,
+        subcategoryId,
+        // Backend tests show values like "daily" / "weekly".
+        // This UI currently collects a daily price, so default to "daily".
+        rentType: "daily",
+        rentBasedOnType: data.pricePerDay ? Number(data.pricePerDay) : undefined,
+        address: addressString || undefined,
+        navigation: undefined,
+        message: data.description || undefined,
+        mobileNumber: undefined,
+        dynamicAttributes: {
+          condition: data.condition || "",
+          securityDeposit: data.securityDeposit ? String(data.securityDeposit) : "",
+          minimumRentalPeriod: data.minimumRentalPeriod ? String(data.minimumRentalPeriod) : "",
+          maximumRentalPeriod: data.maximumRentalPeriod ? String(data.maximumRentalPeriod) : "",
+          instantBooking: typeof data.instantBooking === "boolean" ? String(data.instantBooking) : "",
+        },
+      };
+
+      // Controller expects @RequestPart("data") ProductRequest data
+      formData.append(
+        "data",
+        new Blob([JSON.stringify(productRequest)], { type: "application/json" })
+      );
+
+      await api.post("/api/products/addproduct", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      if (response.data.success) {
-        navigate(`/items/${response.data.data._id}`);
-      }
+
+      navigate("/my-listings");
     } catch (error) {
       setSubmitError(error.response?.data?.error || "Failed to create item.");
     } finally {
@@ -254,7 +269,7 @@ const AddItem = () => {
                 >
                   <option value="">Select a category</option>
                   {categories.map((cat) => (
-                    <option key={cat._id} value={cat._id}>
+                    <option key={cat.categoryId ?? cat._id} value={cat.categoryId ?? cat._id}>
                       {cat.name}
                     </option>
                   ))}
@@ -287,7 +302,7 @@ const AddItem = () => {
                       : "Select a subcategory"}
                   </option>
                   {subcategories.map((sub) => (
-                    <option key={sub._id} value={sub._id}>
+                    <option key={sub.subcategoryId ?? sub._id} value={sub.subcategoryId ?? sub._id}>
                       {sub.name}
                     </option>
                   ))}
@@ -552,10 +567,10 @@ const AddItem = () => {
 
       case 3: {
         const selectedCategoryObj = categories.find(
-          (cat) => cat._id === watchedValues.category
+          (cat) => String(cat.categoryId ?? cat._id) === String(watchedValues.category)
         );
         const selectedSubcategoryObj = subcategories.find(
-          (sub) => sub._id === watchedValues.subcategory
+          (sub) => String(sub.subcategoryId ?? sub._id) === String(watchedValues.subcategory)
         );
 
         return (
