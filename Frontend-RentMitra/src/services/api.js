@@ -1,10 +1,14 @@
 // src/services/api.js
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || '/';
+const envApiUrl = import.meta.env.VITE_API_URL;
+const API_URL = (typeof window !== 'undefined' && (envApiUrl === 'http://localhost:8086' || envApiUrl === 'https://localhost:8086'))
+  ? '/'
+  : (envApiUrl || '/');
 
 const api = axios.create({
   baseURL: API_URL,
+
   headers: {
     'Content-Type': 'application/json',
   },

@@ -159,9 +159,21 @@ const itemService = {
     return api.delete(`/items/${id}`);
   },
 
+  // Add to favorites
+  addToFavorites: (id) => {
+    return api.post(`/api/favorites/${id}`);
+  },
+
+  // Remove from favorites
+  removeFromFavorites: (id) => {
+    return api.delete(`/api/favorites/remove-from-favorites/${id}`);
+  },
+
   // Toggle favorite
-  toggleFavorite: (id) => {
-    return api.post(`/items/${id}/favorite`);
+  toggleFavorite: (id, isCurrentlyFavorited = false) => {
+    return isCurrentlyFavorited
+      ? itemService.removeFromFavorites(id)
+      : itemService.addToFavorites(id);
   },
 
   // Toggle availability

@@ -28,30 +28,23 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = async () => {
     const token = localStorage.getItem("token");
+
+    // Frontend-only persistence: if a JWT is present, consider the user logged in.
+    // Backend will still enforce auth on protected APIs.
+    if (token) {
+      setIsAuthenticated(true);
+    } else {
+      setUser(null);
+      setIsAuthenticated(false);
+    }
+
+    // Best-effort validation (do not force logout on failure)
     try {
       if (token) {
-        const response = await api.get("/auth/me");
-        // /auth/me returns a simple object like { authenticated: true, ... }
-        if (response && response.authenticated) {
-          setIsAuthenticated(true);
-          return;
-        }
-      }
-      // If no token or no valid user data, treat as logged out
-      if (!token) {
-        setUser(null);
-        setIsAuthenticated(false);
+        await api.get("/auth/me");
       }
     } catch (error) {
       console.error("Auth check failed:", error);
-      // If a token still exists, keep the user marked as authenticated
-      // so the UI reflects the stored session; backend will still enforce JWT.
-      if (token) {
-        setIsAuthenticated(true);
-      } else {
-        setUser(null);
-        setIsAuthenticated(false);
-      }
     } finally {
       setLoading(false);
     }

@@ -10,7 +10,7 @@ const userService = {
   },
 
   getFavorites: (params) => {
-    return api.get('/users/favorites', { params });
+    return api.get('/api/favorites/get-favorite', { params });
   },
 
   getReviews: (userId, params) => {

@@ -45,8 +45,8 @@ const ItemDetails = () => {
 
   const handleToggleFavorite = async () => {
     try {
-      const res = await itemService.toggleFavorite(id);
-      setIsFavorited(res.data.data.isFavorited);
+      await itemService.toggleFavorite(id, isFavorited);
+      setIsFavorited((v) => !v);
     } catch {
       // handle error
     }

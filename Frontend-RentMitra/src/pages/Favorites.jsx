@@ -12,13 +12,30 @@ const Favorites = () => {
   const { data: favorites, isLoading, error } = useQuery('favorites', () => userService.getFavorites());
   const [loadingIds, setLoadingIds] = React.useState([]);
 
+  const favoriteItems = React.useMemo(() => {
+    // NOTE: api.js returns response.data directly, so `favorites` is already the payload
+    const list = favorites;
+    if (!Array.isArray(list)) return [];
+    return list
+      .map((f) => f?.product)
+      .filter(Boolean)
+      .map((p) => ({
+        ...p,
+        _id: p.productId ?? p._id,
+        mainImage: Array.isArray(p.imageUrls) && p.imageUrls.length > 0 ? p.imageUrls[0] : p.mainImage,
+        images: Array.isArray(p.imageUrls) ? p.imageUrls.map((url) => ({ url })) : p.images,
+        pricePerDay: p.rentBasedOnType ?? p.pricePerDay,
+        location: p.address ? { city: p.address } : p.location,
+      }));
+  }, [favorites]);
+
   // Debug log to see what backend returns
   console.log('Favorites page backend data:', favorites);
 
   const handleToggleFavorite = async (itemId) => {
     setLoadingIds((ids) => [...ids, itemId]);
     try {
-      await itemService.toggleFavorite(itemId);
+      await itemService.toggleFavorite(itemId, true);
       await queryClient.invalidateQueries('favorites');
       console.log('Invalidated favorites query after toggle');
     } catch (err) {
@@ -52,9 +69,9 @@ const Favorites = () => {
           <div className="p-12 text-center bg-white shadow-lg rounded-2xl">
             <p className="text-red-600">Could not load your favorites. Please try again later.</p>
           </div>
-        ) : favorites && favorites.data && favorites.data.length > 0 ? (
+        ) : favoriteItems.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {favorites.data.map(item => (
+            {favoriteItems.map(item => (
               <ItemCard
                 item={item}
                 key={item._id}

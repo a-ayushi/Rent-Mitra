@@ -24,13 +24,13 @@ const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = fal
   }, [initialIsFavorited]);
 
   const { mutate: toggleFavorite, isLoading: isTogglingFavorite } = useMutation(
-    () => itemService.toggleFavorite(item._id),
+    (currentlyFavorited) => itemService.toggleFavorite(item._id, currentlyFavorited),
     {
-      onSuccess: (data) => {
-        const isFavorited = data?.data?.isFavorited;
-        setIsFavorited(isFavorited);
+      onSuccess: (_data, currentlyFavorited) => {
+        const nextIsFavorited = !currentlyFavorited;
+        setIsFavorited(nextIsFavorited);
         queryClient.invalidateQueries('favorites');
-        toast.success(isFavorited ? 'Added to favorites' : 'Removed from favorites');
+        toast.success(nextIsFavorited ? 'Added to favorites' : 'Removed from favorites');
       },
       onError: () => {
         toast.error('Failed to update favorites.');
@@ -51,7 +51,7 @@ const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = fal
       return;
     }
     // Fallback to internal mutation for general item lists
-    toggleFavorite();
+    toggleFavorite(isFavorited);
   };
 
   const handleCardClick = () => {
