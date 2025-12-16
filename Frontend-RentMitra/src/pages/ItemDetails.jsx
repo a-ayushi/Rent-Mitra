@@ -6,6 +6,7 @@ import ChatModal from '../components/ChatModal';
 import axios from 'axios';
 import {
   ArrowBack,
+  Close,
   Visibility,
   Favorite,
   FavoriteBorder,
@@ -21,6 +22,7 @@ const ItemDetails = () => {
   const { user } = useAuth();
   const [isFavorited, setIsFavorited] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState("");
+  const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
 
   // Chat modal state
   const [chatModalOpen, setChatModalOpen] = useState(false);
@@ -50,6 +52,23 @@ const ItemDetails = () => {
     };
     fetchItem();
   }, [id, user]);
+
+  useEffect(() => {
+    if (!isImagePreviewOpen) return;
+
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setIsImagePreviewOpen(false);
+    };
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isImagePreviewOpen]);
 
   const parseJsonMaybe = (val, fallback) => {
     if (val == null) return fallback;
@@ -157,6 +176,35 @@ const ItemDetails = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {isImagePreviewOpen && selectedImageUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => setIsImagePreviewOpen(false)}
+          role="button"
+          tabIndex={-1}
+        >
+          <div
+            className="relative w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            role="button"
+            tabIndex={-1}
+          >
+            <button
+              type="button"
+              onClick={() => setIsImagePreviewOpen(false)}
+              className="absolute right-3 top-3 z-10 p-2 bg-white/90 hover:bg-white rounded-full shadow"
+            >
+              <Close className="text-gray-800" />
+            </button>
+            <img
+              src={selectedImageUrl}
+              alt={item.name}
+              className="w-full h-full max-h-[85vh] object-contain bg-black"
+            />
+          </div>
+        </div>
+      )}
+
       <div className="container px-4 py-12 mx-auto">
         <button
           onClick={() => navigate(-1)}
@@ -172,7 +220,8 @@ const ItemDetails = () => {
                   <img
                     src={selectedImageUrl}
                     alt={item.name}
-                    className="object-contain w-full h-full"
+                    onClick={() => setIsImagePreviewOpen(true)}
+                    className="object-contain w-full h-full cursor-zoom-in"
                   />
                 ) : null}
               </div>
