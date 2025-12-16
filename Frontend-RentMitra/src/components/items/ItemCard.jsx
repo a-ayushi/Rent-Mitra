@@ -24,13 +24,13 @@ const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = fal
   }, [initialIsFavorited]);
 
   const { mutate: toggleFavorite, isLoading: isTogglingFavorite } = useMutation(
-    () => itemService.toggleFavorite(item._id),
+    (currentlyFavorited) => itemService.toggleFavorite(item._id, currentlyFavorited),
     {
-      onSuccess: (data) => {
-        const isFavorited = data?.data?.isFavorited;
-        setIsFavorited(isFavorited);
+      onSuccess: (_data, currentlyFavorited) => {
+        const nextIsFavorited = !currentlyFavorited;
+        setIsFavorited(nextIsFavorited);
         queryClient.invalidateQueries('favorites');
-        toast.success(isFavorited ? 'Added to favorites' : 'Removed from favorites');
+        toast.success(nextIsFavorited ? 'Added to favorites' : 'Removed from favorites');
       },
       onError: () => {
         toast.error('Failed to update favorites.');
@@ -51,7 +51,7 @@ const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = fal
       return;
     }
     // Fallback to internal mutation for general item lists
-    toggleFavorite();
+    toggleFavorite(isFavorited);
   };
 
   const handleCardClick = () => {
@@ -77,7 +77,7 @@ const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = fal
       role="button"
       className="flex flex-col overflow-hidden transition-all duration-300 bg-white border border-gray-100 rounded-xl shadow-sm cursor-pointer group hover:shadow-xl hover:-translate-y-0.5"
     >
-      <div className="relative w-full h-48 overflow-hidden bg-gray-100 md:h-56 rounded-t-xl">
+      <div className="relative w-full h-48 overflow-hidden bg-white md:h-56 rounded-t-xl">
         <img
           src={item.mainImage || item.images?.[0]?.url || '/placeholder.jpg'}
           alt={item.title || item.name || 'Product'}
@@ -105,7 +105,7 @@ const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = fal
         </button>
       </div>
 
-      <div className="flex flex-col flex-grow px-3.5 pt-2.5 pb-3.5">
+      <div className="flex flex-col flex-grow px-3.5 pt-2.5 pb-3.5 bg-gray-100">
         {/* Price on top */}
         <div className="mb-1 text-lg font-bold text-gray-900">
           {typeof item.pricePerDay === 'number' ? (

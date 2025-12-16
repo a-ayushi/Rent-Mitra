@@ -20,6 +20,7 @@ const ItemDetails = () => {
   const [error, setError] = useState("");
   const { user } = useAuth();
   const [isFavorited, setIsFavorited] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState("");
 
   // Chat modal state
   const [chatModalOpen, setChatModalOpen] = useState(false);
@@ -32,6 +33,13 @@ const ItemDetails = () => {
       try {
         const product = await itemService.getItem(id);
         setItem(product);
+        const firstUrl =
+          (Array.isArray(product?.images) && product.images.length > 0
+            ? product.images[0]?.url
+            : null) ||
+          product?.mainImage ||
+          "";
+        setSelectedImageUrl(firstUrl);
         setViews(product.views || 0);
         setIsFavorited(product.favoritedBy?.includes(user?.id));
         setLoading(false);
@@ -43,10 +51,72 @@ const ItemDetails = () => {
     fetchItem();
   }, [id, user]);
 
+  const parseJsonMaybe = (val, fallback) => {
+    if (val == null) return fallback;
+    if (typeof val === "object") return val;
+    if (typeof val !== "string") return fallback;
+    try {
+      return JSON.parse(val);
+    } catch {
+      return fallback;
+    }
+  };
+
+  const addressParts = (() => {
+    const rawParts = [
+      item?.address || item?.location?.address,
+      item?.location?.city,
+      item?.location?.state,
+    ]
+      .map((v) => (v == null ? "" : String(v).trim()))
+      .filter(Boolean);
+
+    const seen = new Set();
+    const unique = [];
+    rawParts.forEach((p) => {
+      const key = p.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(p);
+      }
+    });
+    return unique;
+  })();
+
+  const detailEntries = (() => {
+    const dyn = item?.dynamicAttributes || {};
+    const entries = [];
+
+    Object.entries(dyn)
+      .filter(([key]) => key !== "rentPrices" && key !== "attributes")
+      .forEach(([key, value]) => {
+        entries.push([key, value]);
+      });
+
+    const rentPrices = parseJsonMaybe(dyn?.rentPrices, null);
+    if (rentPrices && typeof rentPrices === "object") {
+      Object.entries(rentPrices).forEach(([k, v]) => {
+        if (v === "" || v == null) return;
+        entries.push([`rentPrice (${k})`, `₹${v}`]);
+      });
+    }
+
+    const attrs = parseJsonMaybe(dyn?.attributes, []);
+    if (Array.isArray(attrs)) {
+      attrs.forEach((a) => {
+        const trimmed = String(a || "").trim();
+        if (!trimmed) return;
+        entries.push(["attribute", trimmed]);
+      });
+    }
+
+    return entries;
+  })();
+
   const handleToggleFavorite = async () => {
     try {
-      const res = await itemService.toggleFavorite(id);
-      setIsFavorited(res.data.data.isFavorited);
+      await itemService.toggleFavorite(id, isFavorited);
+      setIsFavorited((v) => !v);
     } catch {
       // handle error
     }
@@ -98,30 +168,34 @@ const ItemDetails = () => {
           <div className="flex flex-col gap-8 md:flex-row">
             <div className="flex-shrink-0 w-full md:w-1/2">
               <div className="w-full h-80 overflow-hidden bg-gray-100 rounded-2xl md:h-96">
-                {item.images && item.images.length > 0 ? (
+                {selectedImageUrl ? (
                   <img
-                    src={item.images[0].url}
+                    src={selectedImageUrl}
                     alt={item.name}
                     className="object-contain w-full h-full"
                   />
                 ) : null}
               </div>
               <div className="flex gap-2 mt-3">
-                {item.images &&
-                  item.images
-                    .slice(1)
-                    .map((img, idx) => (
-                      <div
-                        key={idx}
-                        className="w-20 h-20 overflow-hidden bg-white border border-gray-200 rounded-xl"
-                      >
-                        <img
-                          src={img.url}
-                          alt="thumb"
-                          className="object-contain w-full h-full"
-                        />
-                      </div>
-                    ))}
+                {Array.isArray(item.images) &&
+                  item.images.map((img, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setSelectedImageUrl(img.url)}
+                      className={`w-20 h-20 overflow-hidden bg-white border rounded-xl transition-colors ${
+                        img.url === selectedImageUrl
+                          ? "border-gray-800"
+                          : "border-gray-200 hover:border-gray-400"
+                      }`}
+                    >
+                      <img
+                        src={img.url}
+                        alt="thumb"
+                        className="object-contain w-full h-full"
+                      />
+                    </button>
+                  ))}
               </div>
             </div>
             <div className="flex-grow">
@@ -164,9 +238,7 @@ const ItemDetails = () => {
                 <div>
                   <strong className="block mb-1 text-gray-900">Address</strong>
                   <div>
-                    {item.address || item.location?.address}
-                    {item.location?.city && `, ${item.location.city}`}
-                    {item.location?.state && `, ${item.location.state}`}
+                    {addressParts.join(", ")}
                   </div>
                 </div>
 
@@ -192,13 +264,13 @@ const ItemDetails = () => {
                 )}
               </div>
 
-              {item.dynamicAttributes && Object.keys(item.dynamicAttributes).length > 0 && (
+              {detailEntries.length > 0 && (
                 <div className="mb-6">
                   <strong className="block mb-2 text-gray-900">Details</strong>
                   <div className="grid gap-2 text-sm md:grid-cols-2">
-                    {Object.entries(item.dynamicAttributes).map(([key, value]) => (
+                    {detailEntries.map(([key, value], idx) => (
                       <div
-                        key={key}
+                        key={`${key}-${idx}`}
                         className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg"
                       >
                         <span className="font-medium text-gray-700">{key}</span>

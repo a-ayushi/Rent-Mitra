@@ -64,14 +64,14 @@ const CategoryItems = () => {
   useEffect(() => {
     async function fetchFavorites() {
       try {
-        const res = await userService.getFavorites();
-        // Assuming res.data is an array of favorite items
-        if (res && res.data) {
-          // If res.data is an array of item objects, map to IDs
-          const ids = Array.isArray(res.data)
-            ? res.data.map(item => item._id || item.id)
-            : [];
+        const list = await userService.getFavorites();
+        if (Array.isArray(list)) {
+          const ids = list
+            .map((f) => f?.product?.productId ?? f?.productId ?? f?.id)
+            .filter(Boolean);
           setFavorites(ids);
+        } else {
+          setFavorites([]);
         }
       } catch (err) {
         console.error('Failed to fetch favorites:', err);
@@ -126,7 +126,8 @@ const CategoryItems = () => {
 
   const toggleFavorite = async (itemId) => {
     try {
-      await itemService.toggleFavorite(itemId);
+      const isCurrentlyFavorited = favorites.includes(itemId);
+      await itemService.toggleFavorite(itemId, isCurrentlyFavorited);
       // Optimistically update state
       setFavorites(prev =>
         prev.includes(itemId)
