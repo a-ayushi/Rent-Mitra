@@ -144,10 +144,10 @@ const BeautifulRentalHome = () => {
             </div>
             
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-              Rent Anything,
+              Why buy?
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-                Pay by the Day
+                Rent and pay for what you use.
               </span>
             </h1>
             
@@ -276,55 +276,59 @@ const BeautifulRentalHome = () => {
             {loading ? (
               [...Array(4)].map((_, idx) => <SkeletonCard key={idx} />)
             ) : (
-              featuredItems.slice(0, 4).map((item) => (
-                <div
-                  key={item._id}
-                  onClick={() => handleItemClick(item._id)}
-                  className="bg-white border-2 border-gray-100 rounded-2xl p-5 hover:border-gray-900 hover:shadow-xl transition-all group cursor-pointer"
-                >
-                  <div className="relative mb-4">
-                    {item.images && item.images[0] ? (
-                      <img 
-                        src={item.images[0]} 
-                        alt={item.name}
-                        className="w-full h-48 object-cover rounded-xl"
-                      />
-                    ) : (
-                      <div className="w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center text-7xl">
-                        📦
-                      </div>
-                    )}
-                  </div>
-                  
-                  <h3 className="font-bold text-lg text-gray-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
-                    {item.name}
-                  </h3>
-                  
-                  {item.rating && (
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                        <span className="font-semibold text-sm">{item.rating}</span>
-                      </div>
-                      {item.reviewCount && (
-                        <span className="text-gray-400 text-sm">({item.reviewCount})</span>
+              featuredItems.slice(0, 4).map((item) => {
+                const imageUrl = item?.mainImage || item?.images?.[0]?.url;
+
+                return (
+                  <div
+                    key={item._id}
+                    onClick={() => handleItemClick(item._id)}
+                    className="bg-white border-2 border-gray-100 rounded-2xl p-5 hover:border-gray-900 hover:shadow-xl transition-all group cursor-pointer"
+                  >
+                    <div className="relative mb-4">
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={item.name}
+                          className="w-full h-48 object-cover rounded-xl"
+                        />
+                      ) : (
+                        <div className="w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center text-7xl">
+                          📦
+                        </div>
                       )}
                     </div>
-                  )}
 
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                    <div>
-                      <div className="text-2xl font-bold text-gray-900">
-                        ₹{item.rentalPrice || item.price}
+                    <h3 className="font-bold text-lg text-gray-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
+                      {item.name}
+                    </h3>
+
+                    {item.rating && (
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                          <span className="font-semibold text-sm">{item.rating}</span>
+                        </div>
+                        {item.reviewCount && (
+                          <span className="text-gray-400 text-sm">({item.reviewCount})</span>
+                        )}
                       </div>
-                      <div className="text-xs text-gray-500">per day</div>
+                    )}
+
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                      <div>
+                        <div className="text-2xl font-bold text-gray-900">
+                          ₹{item.rentalPrice || item.price}
+                        </div>
+                        <div className="text-xs text-gray-500">per day</div>
+                      </div>
+                      <button className="px-4 py-2 bg-gray-900 text-white rounded-lg font-semibold hover:bg-black transition-all">
+                        Rent Now
+                      </button>
                     </div>
-                    <button className="px-4 py-2 bg-gray-900 text-white rounded-lg font-semibold hover:bg-black transition-all">
-                      Rent Now
-                    </button>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
