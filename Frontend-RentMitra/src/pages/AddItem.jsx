@@ -32,6 +32,9 @@ const AddItem = () => {
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
 
+  const [attributeInput, setAttributeInput] = useState("");
+  const [attributeError, setAttributeError] = useState("");
+
   const [submitError, setSubmitError] = useState("");
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
@@ -48,16 +51,24 @@ const AddItem = () => {
   } = useForm({
     defaultValues: {
       name: "",
-      description: "",
+      message: "",
       category: "",
       subcategory: "",
       condition: "excellent",
       brand: "",
-      pricePerDay: "",
+      attributes: [],
+      rentTypes: ["daily"],
+      rentPrices: {
+        daily: "",
+        weekly: "",
+        monthly: "",
+      },
       securityDeposit: "",
       minimumRentalPeriod: 1,
       maximumRentalPeriod: 30,
+      mobileNumber: "",
       address: "",
+      navigation: "",
       city: city || "",
       state: "",
       zipCode: "",
@@ -68,6 +79,7 @@ const AddItem = () => {
 
   const watchedValues = watch();
   const selectedCategory = watch("category");
+  const watchedAttributes = watch("attributes") || [];
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -124,15 +136,21 @@ const AddItem = () => {
   };
 
   const handleNext = async () => {
+    const rentTypes = watch("rentTypes") || [];
+    const rentPriceFields = (Array.isArray(rentTypes) ? rentTypes : []).map(
+      (t) => `rentPrices.${t}`
+    );
+
     const fieldsToValidate = [
-      ["name", "description", "category", "condition"],
+      ["name", "message", "category", "condition"],
       [
-        "pricePerDay",
+        "rentTypes",
+        ...rentPriceFields,
         "securityDeposit",
         "minimumRentalPeriod",
         "maximumRentalPeriod",
       ],
-      ["address", "city", "state", "zipCode"],
+      ["address", "city", "state", "zipCode", "mobileNumber"],
     ][activeStep];
 
     const isValid = await trigger(fieldsToValidate);
@@ -147,6 +165,51 @@ const AddItem = () => {
   };
 
   const handleBack = () => setActiveStep((prev) => prev - 1);
+
+  const addAttribute = () => {
+    const raw = String(attributeInput || "").trim();
+    if (!raw) return;
+
+    const normalized = raw.toLowerCase();
+    const current = Array.isArray(watchedAttributes) ? watchedAttributes : [];
+    const exists = current.some((a) => String(a).toLowerCase() === normalized);
+
+    if (exists) {
+      setAttributeError("Attribute already added.");
+      return;
+    }
+    if (current.length >= 8) {
+      setAttributeError("You can add up to 8 attributes.");
+      return;
+    }
+
+    setValue("attributes", [...current, raw], { shouldDirty: true, shouldValidate: false });
+    setAttributeInput("");
+    setAttributeError("");
+  };
+
+  const removeAttribute = (attr) => {
+    const current = Array.isArray(watchedAttributes) ? watchedAttributes : [];
+    setValue(
+      "attributes",
+      current.filter((a) => a !== attr),
+      { shouldDirty: true, shouldValidate: false }
+    );
+    setAttributeError("");
+  };
+
+  const handleFormSubmit = async (e) => {
+    if (activeStep !== steps.length - 1) {
+      e.preventDefault();
+      await handleNext();
+      return;
+    }
+
+    // On the final step, do not submit automatically (e.g., Enter key).
+    // Submission is handled explicitly via the Submit button click.
+    e.preventDefault();
+    return;
+  };
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -175,20 +238,36 @@ const AddItem = () => {
         brand: data.brand || undefined,
         categoryId,
         subcategoryId,
-        // Backend tests show values like "daily" / "weekly".
-        // This UI currently collects a daily price, so default to "daily".
-        rentType: "daily",
-        rentBasedOnType: data.pricePerDay ? Number(data.pricePerDay) : undefined,
+        rentType:
+          Array.isArray(data.rentTypes) && data.rentTypes.length > 0
+            ? String(data.rentTypes[0])
+            : "daily",
+        rentBasedOnType: (() => {
+          const types = Array.isArray(data.rentTypes) ? data.rentTypes : [];
+          const primary = types.length > 0 ? String(types[0]) : "daily";
+          const val = data?.rentPrices?.[primary];
+          return val ? Number(val) : undefined;
+        })(),
         address: addressString || undefined,
-        navigation: undefined,
-        message: data.description || undefined,
-        mobileNumber: undefined,
+        navigation: data.navigation || undefined,
+        message: data.message || undefined,
+        mobileNumber: data.mobileNumber || undefined,
         dynamicAttributes: {
           condition: data.condition || "",
           securityDeposit: data.securityDeposit ? String(data.securityDeposit) : "",
           minimumRentalPeriod: data.minimumRentalPeriod ? String(data.minimumRentalPeriod) : "",
           maximumRentalPeriod: data.maximumRentalPeriod ? String(data.maximumRentalPeriod) : "",
           instantBooking: typeof data.instantBooking === "boolean" ? String(data.instantBooking) : "",
+          rentPrices: (() => {
+            const types = Array.isArray(data.rentTypes) ? data.rentTypes : [];
+            const prices = data?.rentPrices || {};
+            const selected = {};
+            types.forEach((t) => {
+              selected[String(t)] = prices?.[String(t)] ?? "";
+            });
+            return JSON.stringify(selected);
+          })(),
+          attributes: JSON.stringify(Array.isArray(data.attributes) ? data.attributes : []),
         },
       };
 
@@ -236,7 +315,7 @@ const AddItem = () => {
                 Description <span className="text-red-500">*</span>
               </label>
               <textarea
-                {...register("description", {
+                {...register("message", {
                   required: "Description is required",
                   minLength: {
                     value: 20,
@@ -246,12 +325,12 @@ const AddItem = () => {
                 rows="4"
                 placeholder="Describe your item in detail..."
                 className={`w-full px-4 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 ${
-                  errors.description ? "border-red-500" : "border-gray-300 hover:border-gray-400"
+                  errors.message ? "border-red-500" : "border-gray-300 hover:border-gray-400"
                 }`}
               />
-              {errors.description && (
+              {errors.message && (
                 <p className="mt-1 text-sm text-red-500">
-                  {errors.description.message}
+                  {errors.message.message}
                 </p>
               )}
             </div>
@@ -336,35 +415,120 @@ const AddItem = () => {
                 />
               </div>
             </div>
+
+            <div>
+              <label className="block mb-2 text-sm font-semibold text-gray-700">
+                Attributes
+              </label>
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <input
+                    value={attributeInput}
+                    onChange={(e) => {
+                      setAttributeInput(e.target.value);
+                      if (attributeError) setAttributeError("");
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addAttribute();
+                      }
+                    }}
+                    placeholder="Type an attribute (e.g., Color, Size, Warranty)"
+                    className="flex-1 w-full px-4 py-3 transition-colors border border-gray-300 rounded-lg hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={addAttribute}
+                    className="px-5 py-3 font-medium text-white transition-all bg-gray-800 rounded-lg hover:bg-gray-900"
+                  >
+                    Add
+                  </button>
+                </div>
+
+                {attributeError && (
+                  <p className="text-sm text-red-500">{attributeError}</p>
+                )}
+
+                <div className="flex flex-wrap gap-2">
+                  {(Array.isArray(watchedAttributes) ? watchedAttributes : []).map((attr) => (
+                    <span
+                      key={attr}
+                      className="inline-flex items-center gap-2 px-3 py-1 text-sm border border-gray-300 rounded-full bg-gray-50"
+                    >
+                      <span className="text-gray-800">{attr}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeAttribute(attr)}
+                        className="text-gray-500 hover:text-gray-700"
+                        aria-label={`Remove ${attr}`}
+                      >
+                        <Close fontSize="small" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <p className="text-sm text-gray-500">
+                  {Array.isArray(watchedAttributes) ? watchedAttributes.length : 0}/8 attributes
+                </p>
+              </div>
+            </div>
           </div>
         );
 
       case 1:
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div>
-                <label className="block mb-2 text-sm font-semibold text-gray-700">
-                  Price per Day (₹) <span className="text-red-500">*</span>
+            <div>
+              <label className="block mb-2 text-sm font-semibold text-gray-700">
+                Rent Types <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <label className="flex items-center gap-3 px-4 py-3 border border-gray-300 rounded-lg cursor-pointer hover:border-gray-400">
+                  <input
+                    type="checkbox"
+                    value="daily"
+                    {...register("rentTypes", {
+                      validate: (v) =>
+                        (Array.isArray(v) && v.length > 0) || "Select at least one rent type",
+                    })}
+                    className="w-5 h-5 text-gray-600 rounded focus:ring-gray-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Daily</span>
                 </label>
-                <input
-                  type="number"
-                  {...register("pricePerDay", {
-                    required: "Price is required",
-                    min: { value: 1, message: "Price must be greater than 0" },
-                  })}
-                  placeholder="0.00"
-                  className={`w-full px-4 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 ${
-                    errors.pricePerDay ? "border-red-500" : "border-gray-300 hover:border-gray-400"
-                  }`}
-                />
-                {errors.pricePerDay && (
-                  <p className="mt-1 text-sm text-red-500">
-                    {errors.pricePerDay.message}
-                  </p>
-                )}
-              </div>
 
+                <label className="flex items-center gap-3 px-4 py-3 border border-gray-300 rounded-lg cursor-pointer hover:border-gray-400">
+                  <input
+                    type="checkbox"
+                    value="weekly"
+                    {...register("rentTypes", {
+                      validate: (v) =>
+                        (Array.isArray(v) && v.length > 0) || "Select at least one rent type",
+                    })}
+                    className="w-5 h-5 text-gray-600 rounded focus:ring-gray-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Weekly</span>
+                </label>
+
+                <label className="flex items-center gap-3 px-4 py-3 border border-gray-300 rounded-lg cursor-pointer hover:border-gray-400">
+                  <input
+                    type="checkbox"
+                    value="monthly"
+                    {...register("rentTypes", {
+                      validate: (v) =>
+                        (Array.isArray(v) && v.length > 0) || "Select at least one rent type",
+                    })}
+                    className="w-5 h-5 text-gray-600 rounded focus:ring-gray-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Monthly</span>
+                </label>
+              </div>
+              {errors.rentTypes && (
+                <p className="mt-1 text-sm text-red-500">{errors.rentTypes.message}</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div>
                 <label className="block mb-2 text-sm font-semibold text-gray-700">
                   Security Deposit (₹) <span className="text-red-500">*</span>
@@ -384,6 +548,89 @@ const AddItem = () => {
                   <p className="mt-1 text-sm text-red-500">
                     {errors.securityDeposit.message}
                   </p>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                {(Array.isArray(watch("rentTypes")) ? watch("rentTypes") : []).includes("daily") && (
+                  <div>
+                    <label className="block mb-2 text-sm font-semibold text-gray-700">
+                      Daily Price (₹) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      {...register("rentPrices.daily", {
+                        validate: (v) => {
+                          const types = watch("rentTypes") || [];
+                          if (!Array.isArray(types) || !types.includes("daily")) return true;
+                          return (v && Number(v) > 0) || "Enter daily price";
+                        },
+                      })}
+                      placeholder="0.00"
+                      className={`w-full px-4 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 ${
+                        errors?.rentPrices?.daily
+                          ? "border-red-500"
+                          : "border-gray-300 hover:border-gray-400"
+                      }`}
+                    />
+                    {errors?.rentPrices?.daily && (
+                      <p className="mt-1 text-sm text-red-500">{errors.rentPrices.daily.message}</p>
+                    )}
+                  </div>
+                )}
+
+                {(Array.isArray(watch("rentTypes")) ? watch("rentTypes") : []).includes("weekly") && (
+                  <div>
+                    <label className="block mb-2 text-sm font-semibold text-gray-700">
+                      Weekly Price (₹) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      {...register("rentPrices.weekly", {
+                        validate: (v) => {
+                          const types = watch("rentTypes") || [];
+                          if (!Array.isArray(types) || !types.includes("weekly")) return true;
+                          return (v && Number(v) > 0) || "Enter weekly price";
+                        },
+                      })}
+                      placeholder="0.00"
+                      className={`w-full px-4 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 ${
+                        errors?.rentPrices?.weekly
+                          ? "border-red-500"
+                          : "border-gray-300 hover:border-gray-400"
+                      }`}
+                    />
+                    {errors?.rentPrices?.weekly && (
+                      <p className="mt-1 text-sm text-red-500">{errors.rentPrices.weekly.message}</p>
+                    )}
+                  </div>
+                )}
+
+                {(Array.isArray(watch("rentTypes")) ? watch("rentTypes") : []).includes("monthly") && (
+                  <div>
+                    <label className="block mb-2 text-sm font-semibold text-gray-700">
+                      Monthly Price (₹) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      {...register("rentPrices.monthly", {
+                        validate: (v) => {
+                          const types = watch("rentTypes") || [];
+                          if (!Array.isArray(types) || !types.includes("monthly")) return true;
+                          return (v && Number(v) > 0) || "Enter monthly price";
+                        },
+                      })}
+                      placeholder="0.00"
+                      className={`w-full px-4 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 ${
+                        errors?.rentPrices?.monthly
+                          ? "border-red-500"
+                          : "border-gray-300 hover:border-gray-400"
+                      }`}
+                    />
+                    {errors?.rentPrices?.monthly && (
+                      <p className="mt-1 text-sm text-red-500">{errors.rentPrices.monthly.message}</p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -437,6 +684,43 @@ const AddItem = () => {
       case 2:
         return (
           <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">
+                  Mobile Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  {...register("mobileNumber", {
+                    required: "Mobile number is required",
+                    pattern: {
+                      value: /^[0-9]{10}$/,
+                      message: "Enter a valid 10-digit mobile number",
+                    },
+                  })}
+                  placeholder="9876543210"
+                  className={`w-full px-4 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 ${
+                    errors.mobileNumber
+                      ? "border-red-500"
+                      : "border-gray-300 hover:border-gray-400"
+                  }`}
+                />
+                {errors.mobileNumber && (
+                  <p className="mt-1 text-sm text-red-500">{errors.mobileNumber.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">
+                  Navigation (optional)
+                </label>
+                <input
+                  {...register("navigation")}
+                  placeholder="Landmark / directions"
+                  className="w-full px-4 py-3 transition-colors border border-gray-300 rounded-lg hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block mb-2 text-sm font-semibold text-gray-700">
                 Street Address <span className="text-red-500">*</span>
@@ -614,6 +898,23 @@ const AddItem = () => {
                         <span className="text-gray-800">{watchedValues.brand}</span>
                       </p>
                     )}
+                    {(Array.isArray(watchedValues.attributes) ? watchedValues.attributes : []).length > 0 && (
+                      <div className="text-sm">
+                        <span className="font-medium text-gray-600">Attributes:</span>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {(Array.isArray(watchedValues.attributes) ? watchedValues.attributes : []).map(
+                            (attr) => (
+                              <span
+                                key={attr}
+                                className="px-3 py-1 text-xs border border-gray-300 rounded-full bg-white"
+                              >
+                                {attr}
+                              </span>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -621,9 +922,14 @@ const AddItem = () => {
                   <h4 className="mb-3 font-semibold text-gray-700">Pricing Details</h4>
                   <div className="space-y-2">
                     <p className="text-sm">
-                      <span className="font-medium text-gray-600">Daily Rate:</span>{" "}
-                      <span className="font-semibold text-gray-800">
-                        ₹{watchedValues.pricePerDay}
+                      <span className="font-medium text-gray-600">Rent Prices:</span>{" "}
+                      <span className="text-gray-800">
+                        {(Array.isArray(watchedValues.rentTypes) ? watchedValues.rentTypes : [])
+                          .map((t) => {
+                            const val = watchedValues?.rentPrices?.[t];
+                            return val ? `${t}: ₹${val}` : `${t}: -`;
+                          })
+                          .join(", ") || "-"}
                       </span>
                     </p>
                     <p className="text-sm">
@@ -661,12 +967,24 @@ const AddItem = () => {
                   {watchedValues.address}, {watchedValues.city},{" "}
                   {watchedValues.state} - {watchedValues.zipCode}
                 </p>
+                {watchedValues.navigation && (
+                  <p className="mt-2 text-sm text-gray-700">
+                    <span className="font-medium text-gray-600">Navigation:</span>{" "}
+                    <span className="text-gray-800">{watchedValues.navigation}</span>
+                  </p>
+                )}
+                {watchedValues.mobileNumber && (
+                  <p className="mt-2 text-sm text-gray-700">
+                    <span className="font-medium text-gray-600">Mobile:</span>{" "}
+                    <span className="text-gray-800">{watchedValues.mobileNumber}</span>
+                  </p>
+                )}
               </div>
 
               <div>
                 <h4 className="mb-3 font-semibold text-gray-700">Description</h4>
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                  {watchedValues.description}
+                  {watchedValues.message}
                 </p>
               </div>
 
@@ -777,7 +1095,7 @@ const AddItem = () => {
           )}
 
           {/* Form Content */}
-          <form onSubmit={handleSubmit(onSubmit)} className="px-8 pb-8">
+          <form onSubmit={handleFormSubmit} className="px-8 pb-8">
             <div className="min-h-[400px]">{renderStepContent()}</div>
 
             {/* Navigation Buttons */}
@@ -798,7 +1116,8 @@ const AddItem = () => {
 
               {activeStep === steps.length - 1 ? (
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleSubmit(onSubmit)}
                   disabled={loading}
                   className={`flex items-center px-8 py-3 rounded-lg font-medium transition-all ${
                     loading
