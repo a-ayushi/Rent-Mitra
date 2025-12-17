@@ -9,3 +9,14 @@
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
+
+ html,
+ body {
+   caret-color: transparent;
+ }
+
+ input,
+ textarea,
+ [contenteditable="true"] {
+   caret-color: auto;
+ }

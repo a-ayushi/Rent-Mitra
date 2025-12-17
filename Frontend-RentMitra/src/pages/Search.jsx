@@ -7,7 +7,6 @@ import ItemCard from "../components/items/ItemCard";
 import MapView from "../components/common/MapView";
 import CategoryFilter from "../components/items/CategoryFilter";
 import {
-  Search as SearchIcon,
   FilterList as FilterIcon,
   Clear as ClearIcon,
   LocationOn as LocationIcon,
@@ -220,36 +219,21 @@ const Search = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container px-4 py-8 mx-auto sm:px-6 lg:px-8">
-        {/* Search Header */}
-        <div className="p-4 mb-8 bg-white shadow-lg rounded-2xl">
-          <div className="flex flex-col items-center gap-4 md:flex-row">
-            <div className="relative flex-grow w-full max-w-2xl mx-auto">
-              <SearchIcon className="absolute top-3.5 left-4 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search for items..."
-                value={filters.search}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
-                className="w-full py-3 pl-12 pr-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-800"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setMapView(!mapView)}
-                className="flex items-center gap-2 px-4 py-3 text-sm font-semibold text-gray-800 bg-gray-100 rounded-full shadow-sm hover:bg-gray-200"
-              >
-                {mapView ? (
-                  <>
-                    <ViewListIcon /> List View
-                  </>
-                ) : (
-                  <>
-                    <MapIcon /> Map View
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+        <div className="flex justify-end mb-8">
+          <button
+            onClick={() => setMapView(!mapView)}
+            className="flex items-center gap-2 px-4 py-3 text-sm font-semibold text-gray-800 bg-white shadow-lg rounded-full hover:bg-gray-50"
+          >
+            {mapView ? (
+              <>
+                <ViewListIcon /> List View
+              </>
+            ) : (
+              <>
+                <MapIcon /> Map View
+              </>
+            )}
+          </button>
         </div>
 
         <div className="flex flex-col gap-8">

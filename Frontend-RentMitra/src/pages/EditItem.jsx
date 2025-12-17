@@ -19,13 +19,7 @@ const EditItem = () => {
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-    reset,
-  } = useForm();
+  const { register, handleSubmit, watch, formState: { errors }, reset } = useForm();
 
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
@@ -168,9 +162,12 @@ const EditItem = () => {
               <input
                 id="name"
                 value={name}
+                autoCapitalize="words"
                 onChange={(e) => {
-                  setName(e.target.value);
-                  reset({ ...watch(), name: e.target.value });
+                  const next = e.target.value;
+                  const transformed = !name && next ? next.charAt(0).toUpperCase() + next.slice(1) : next;
+                  setName(transformed);
+                  reset({ ...watch(), name: transformed });
                 }}
                 className={`w-full p-3 border rounded-lg ${
                   errors.name ? "border-red-500" : "border-gray-300"
@@ -193,7 +190,14 @@ const EditItem = () => {
                 id="description"
                 {...register("description", {
                   required: "Description is required",
+                  onChange: (e) => {
+                    const current = watch("description");
+                    if (!current && e?.target?.value) {
+                      e.target.value = e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1);
+                    }
+                  },
                 })}
+                autoCapitalize="sentences"
                 rows="4"
                 className={`w-full p-3 border rounded-lg ${
                   errors.description ? "border-red-500" : "border-gray-300"

@@ -13,6 +13,25 @@ const normalizeImageUrls = (imageUrls) => {
   return [];
 };
 
+const parseJsonMaybe = (val, fallback) => {
+  if (val == null) return fallback;
+  if (typeof val === 'object') return val;
+  if (typeof val !== 'string') return fallback;
+  try {
+    return JSON.parse(val);
+  } catch {
+    return fallback;
+  }
+};
+
+const parseAttributesMaybe = (val) => {
+  const first = parseJsonMaybe(val, null);
+  if (typeof first === 'string') {
+    return parseJsonMaybe(first, null);
+  }
+  return first;
+};
+
 const normalizeImages = (p) => {
   const urls = normalizeImageUrls(p?.imageUrls);
   if (urls.length > 0) {
@@ -33,6 +52,71 @@ const normalizeImages = (p) => {
   return [];
 };
 
+const mapProductToItem = (p, fallbackId) => {
+  const images = normalizeImages(p);
+  const rentPrices = parseJsonMaybe(p?.rentPrices, null);
+  const daily = rentPrices?.daily ?? p?.pricePerDay ?? p?.rentBasedOnType;
+  const weekly = rentPrices?.weekly ?? p?.pricePerWeek;
+  const monthly = rentPrices?.monthly ?? p?.pricePerMonth;
+
+  const attrsObj = parseAttributesMaybe(p?.attributes);
+  const detailsFromDto = {
+    condition: p?.condition,
+    brand: p?.brand,
+    rentTypes: p?.rentTypes,
+    securityDeposit: p?.securityDeposit,
+    minRentalDays: p?.minRentalDays,
+    maxRentalDays: p?.maxRentalDays,
+  };
+
+  const dynamicAttributes = {
+    ...(p?.dynamicAttributes || {}),
+    ...(attrsObj && typeof attrsObj === 'object' && !Array.isArray(attrsObj) ? attrsObj : {}),
+    ...Object.fromEntries(Object.entries(detailsFromDto).filter(([, v]) => v != null && v !== '')),
+    rentPrices: rentPrices ?? p?.dynamicAttributes?.rentPrices,
+  };
+
+  const location = {
+    ...(p?.location || {}),
+    address: p?.streetAddress ?? p?.address ?? p?.location?.address,
+    city: p?.city ?? p?.location?.city,
+    state: p?.state ?? p?.location?.state,
+    zipcode: p?.zipcode ?? p?.location?.zipcode,
+    navigation: p?.navigation ?? p?.location?.navigation,
+  };
+
+  const owner = p?.owner ?? (p?.userId != null ? { _id: p.userId } : p?.owner);
+
+  return {
+    ...p,
+    _id: p?.productId ?? p?._id ?? fallbackId,
+    title: p?.title ?? p?.name,
+    name: p?.name ?? p?.title,
+    address: p?.streetAddress ?? p?.address,
+    streetAddress: p?.streetAddress ?? p?.street_address,
+    city: p?.city,
+    state: p?.state,
+    zipcode: p?.zipcode ?? p?.zipCode ?? p?.zip_code,
+    zipCode: p?.zipCode ?? p?.zipcode ?? p?.zip_code,
+    navigation: p?.navigation,
+    mobileNumber: p?.mobileNumber,
+    securityDeposit: p?.securityDeposit,
+    minRentalDays: p?.minRentalDays,
+    maxRentalDays: p?.maxRentalDays,
+    mainImage: images.length > 0 ? images[0].url : p?.mainImage,
+    images,
+    rentTypes: p?.rentTypes,
+    rentPrices: rentPrices ?? p?.rentPrices,
+    pricePerDay: typeof daily === 'number' ? daily : (daily == null ? undefined : Number(daily)),
+    pricePerWeek: typeof weekly === 'number' ? weekly : (weekly == null ? undefined : Number(weekly)),
+    pricePerMonth: typeof monthly === 'number' ? monthly : (monthly == null ? undefined : Number(monthly)),
+    location,
+    dynamicAttributes,
+    owner,
+    isAvailable: typeof p?.isAvailable === 'boolean' ? p.isAvailable : true,
+  };
+};
+
 const itemService = {
   // Get items with filters
   getItems: async (params) => {
@@ -41,27 +125,7 @@ const itemService = {
     const rawItems = Array.isArray(products) ? products : [];
 
     // Map Java ProductDto -> shape expected by existing React UI / ItemCard
-    const items = rawItems.map((p) => {
-      const images = normalizeImages(p);
-      return {
-        ...p,
-        // React side expects Mongo-style _id
-        _id: p.productId ?? p._id,
-        // Main image field used by ItemCard / Home
-        mainImage: images.length > 0 ? images[0].url : p.mainImage,
-        images,
-        // Normalize price field name
-        pricePerDay: p.rentBasedOnType ?? p.pricePerDay,
-        // Very simple location mapping from address
-        location: p.address
-          ? {
-              city: p.address,
-            }
-          : p.location,
-        // Availability fallback (you can adjust when backend supports it)
-        isAvailable: typeof p.isAvailable === 'boolean' ? p.isAvailable : true,
-      };
-    });
+    const items = rawItems.map((p) => mapProductToItem(p));
 
     return {
       items,
@@ -81,22 +145,7 @@ const itemService = {
 
     const rawItems = Array.isArray(products) ? products : [];
 
-    const items = rawItems.map((p) => {
-      const images = normalizeImages(p);
-      return {
-        ...p,
-        _id: p.productId ?? p._id,
-        mainImage: images.length > 0 ? images[0].url : p.mainImage,
-        images,
-        pricePerDay: p.rentBasedOnType ?? p.pricePerDay,
-        location: p.address
-          ? {
-              city: p.address,
-            }
-          : p.location,
-        isAvailable: typeof p.isAvailable === 'boolean' ? p.isAvailable : true,
-      };
-    });
+    const items = rawItems.map((p) => mapProductToItem(p));
 
     return { items };
   },
@@ -105,37 +154,13 @@ const itemService = {
   getItem: async (id) => {
     const p = await api.get(`/api/products/get-by-id?productId=${id}`);
 
-    const images = normalizeImages(p);
-
-    // Map Java ProductDto -> shape expected by existing React UI / ItemDetails
-    const mapped = {
-      ...p,
-      // Normalize id
-      _id: p.productId ?? p._id ?? id,
-      // Normalize main image + images array (UI often expects images[].url)
-      mainImage: images.length > 0 ? images[0].url : p.mainImage,
-      images,
-      // Normalize price field name
-      pricePerDay: p.rentBasedOnType ?? p.pricePerDay,
-      // Basic location mapping from address string
-      location: p.address
-        ? {
-            ...(p.location || {}),
-            address: p.address,
-            city: p.city || p.address,
-            state: p.state || p.location?.state,
-          }
-        : p.location,
-    };
-
-    return mapped;
+    return mapProductToItem(p, id);
   },
 
   // Create item
   createItem: async (itemData) => {
     const formData = new FormData();
 
-    // Append text fields
     Object.keys(itemData).forEach(key => {
       if (key !== 'images') {
         if (typeof itemData[key] === 'object') {

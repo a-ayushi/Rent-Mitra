@@ -115,6 +115,47 @@ const BeautifulRentalHome = () => {
     navigate(`/items/${itemId}`);
   };
 
+  const parseJsonMaybe = (val, fallback) => {
+    if (val == null) return fallback;
+    if (typeof val === "object") return val;
+    if (typeof val !== "string") return fallback;
+    try {
+      return JSON.parse(val);
+    } catch {
+      return fallback;
+    }
+  };
+
+  const normalizePrice = (val) => {
+    if (val == null || val === "") return null;
+    const n = Number(val);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const getDisplayPrice = (item) => {
+    const dyn = item?.dynamicAttributes || {};
+    const rentPrices = parseJsonMaybe(dyn?.rentPrices, null);
+
+    let daily = normalizePrice(rentPrices?.daily);
+    let weekly = normalizePrice(rentPrices?.weekly);
+    let monthly = normalizePrice(rentPrices?.monthly);
+
+    const rentType = String(item?.rentType || "").toLowerCase();
+    const primary = normalizePrice(item?.rentBasedOnType ?? item?.pricePerDay ?? item?.rentalPrice ?? item?.price);
+
+    if (primary != null) {
+      if (rentType === "daily") daily = daily ?? primary;
+      else if (rentType === "weekly") weekly = weekly ?? primary;
+      else if (rentType === "monthly") monthly = monthly ?? primary;
+      else daily = daily ?? primary;
+    }
+
+    if (daily != null) return { value: daily, unit: "day" };
+    if (weekly != null) return { value: weekly, unit: "week" };
+    if (monthly != null) return { value: monthly, unit: "month" };
+    return null;
+  };
+
   const benefits = [
     { icon: <AttachMoney className="w-8 h-8" />, title: "Save 70% vs Buying", description: "Rent high-quality items at a fraction of the purchase cost" },
     { icon: <Verified className="w-8 h-8" />, title: "Verified Owners", description: "All item owners are identity-verified for your safety" },
@@ -136,7 +177,7 @@ const BeautifulRentalHome = () => {
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white overflow-hidden">
         <div className="absolute inset-0 bg-grid-white/5"></div>
-        <div className="relative container mx-auto px-4 py-20 lg:py-28">
+        <div className="relative container mx-auto px-4 py-6 lg:py-12">
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 mb-6 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
               <TrendingUp className="w-4 h-4 text-green-400" />
@@ -216,7 +257,7 @@ const BeautifulRentalHome = () => {
       </section>
 
       {/* Categories Section */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-12 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
@@ -278,6 +319,7 @@ const BeautifulRentalHome = () => {
             ) : (
               featuredItems.slice(0, 4).map((item) => {
                 const imageUrl = item?.mainImage || item?.images?.[0]?.url;
+                const displayPrice = getDisplayPrice(item);
 
                 return (
                   <div
@@ -318,9 +360,11 @@ const BeautifulRentalHome = () => {
                     <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                       <div>
                         <div className="text-2xl font-bold text-gray-900">
-                          ₹{item.rentalPrice || item.price}
+                          {displayPrice ? `₹${displayPrice.value}` : "Contact for price"}
                         </div>
-                        <div className="text-xs text-gray-500">per day</div>
+                        {displayPrice && (
+                          <div className="text-xs text-gray-500">per {displayPrice.unit}</div>
+                        )}
                       </div>
                       <button className="px-4 py-2 bg-gray-900 text-white rounded-lg font-semibold hover:bg-black transition-all">
                         Rent Now

@@ -26,6 +26,7 @@ const InputField = memo(function InputField({
   onChange,
   error,
   icon,
+  autoCapitalize,
   children,
 }) {
   return (
@@ -41,6 +42,7 @@ const InputField = memo(function InputField({
           placeholder={placeholder}
           value={value}
           onChange={onChange}
+          autoCapitalize={autoCapitalize}
           className={`w-full pl-9 pr-10 py-2 text-sm border rounded-lg text-gray-900 placeholder-gray-400 transition-all focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 ${
             error ? "border-red-400 bg-red-50" : "border-gray-200 hover:border-gray-400 bg-white"
           }`}
@@ -70,12 +72,25 @@ const Register = () => {
   const [alertSeverity, setAlertSeverity] = useState("info");
   const [showOTP, setShowOTP] = useState(false);
 
+  const capitalizeFirst = (s) => {
+    const str = s == null ? "" : String(s);
+    if (!str) return str;
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
   const handleChange = (e) => {
     const { name, value, checked, type } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    setFormData((prev) => {
+      const nextValue = type === "checkbox" ? checked : value;
+      const transformed =
+        name === "name" && !prev.name && typeof nextValue === "string"
+          ? capitalizeFirst(nextValue)
+          : nextValue;
+      return {
+        ...prev,
+        [name]: transformed,
+      };
+    });
     // clear inline error for this field if present
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
@@ -241,6 +256,7 @@ const Register = () => {
                   onChange={handleChange}
                   error={errors.name}
                   icon={<Person />}
+                  autoCapitalize="words"
                 />
                 <InputField
                   id="email"
