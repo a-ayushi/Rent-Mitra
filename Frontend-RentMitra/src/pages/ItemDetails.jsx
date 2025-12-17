@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import itemService from "../services/itemService";
 import { useAuth } from "../hooks/useAuth";
@@ -6,6 +6,8 @@ import ChatModal from '../components/ChatModal';
 import axios from 'axios';
 import {
   ArrowBack,
+  ChevronLeft,
+  ChevronRight,
   Close,
   Visibility,
   Favorite,
@@ -23,6 +25,8 @@ const ItemDetails = () => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState("");
   const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const dragStartXRef = useRef(null);
 
   // Chat modal state
   const [chatModalOpen, setChatModalOpen] = useState(false);
@@ -42,6 +46,7 @@ const ItemDetails = () => {
           product?.mainImage ||
           "";
         setSelectedImageUrl(firstUrl);
+        setPreviewIndex(0);
         setViews(product.views || 0);
         setIsFavorited(product.favoritedBy?.includes(user?.id));
         setLoading(false);
@@ -56,8 +61,33 @@ const ItemDetails = () => {
   useEffect(() => {
     if (!isImagePreviewOpen) return;
 
+    const urls = Array.isArray(item?.images)
+      ? item.images
+          .map((img) => (img?.url == null ? "" : String(img.url).trim()))
+          .filter(Boolean)
+      : [];
+    const canNavigate = urls.length > 1;
+
     const onKeyDown = (e) => {
-      if (e.key === "Escape") setIsImagePreviewOpen(false);
+      if (e.key === "Escape") {
+        setIsImagePreviewOpen(false);
+        return;
+      }
+
+      if (!canNavigate) return;
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        const next = (previewIndex - 1 + urls.length) % urls.length;
+        setPreviewIndex(next);
+        setSelectedImageUrl(urls[next]);
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        const next = (previewIndex + 1) % urls.length;
+        setPreviewIndex(next);
+        setSelectedImageUrl(urls[next]);
+      }
     };
 
     const prevOverflow = document.body.style.overflow;
@@ -68,7 +98,7 @@ const ItemDetails = () => {
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [isImagePreviewOpen]);
+  }, [isImagePreviewOpen, item?.images, previewIndex]);
 
   const parseJsonMaybe = (val, fallback) => {
     if (val == null) return fallback;
@@ -209,6 +239,50 @@ const ItemDetails = () => {
   const primaryRent = getPrimaryRent(item);
   const rentPrices = getRentPrices(item);
 
+  const isMaskedPhone =
+    typeof item?.mobileNumber === "string" && item.mobileNumber.includes("*");
+  const shouldShowPhoneLoginHint = isMaskedPhone && !user;
+
+  const imageUrls = Array.isArray(item?.images)
+    ? item.images
+        .map((img) => (img?.url == null ? "" : String(img.url).trim()))
+        .filter(Boolean)
+    : [];
+  const safeImageUrls = imageUrls.length
+    ? imageUrls
+    : selectedImageUrl
+      ? [selectedImageUrl]
+      : [];
+  const selectedIndex = Math.max(
+    0,
+    safeImageUrls.findIndex((u) => u === selectedImageUrl)
+  );
+
+  const goToIndex = (idx) => {
+    const len = safeImageUrls.length;
+    if (!len) return;
+    const next = ((idx % len) + len) % len;
+    setPreviewIndex(next);
+    setSelectedImageUrl(safeImageUrls[next]);
+  };
+  const goPrev = () => goToIndex(previewIndex - 1);
+  const goNext = () => goToIndex(previewIndex + 1);
+
+  const handlePreviewPointerDown = (e) => {
+    if (safeImageUrls.length <= 1) return;
+    dragStartXRef.current = e.clientX;
+  };
+  const handlePreviewPointerUp = (e) => {
+    if (safeImageUrls.length <= 1) return;
+    const startX = dragStartXRef.current;
+    dragStartXRef.current = null;
+    if (startX == null) return;
+    const dx = e.clientX - startX;
+    const threshold = 50;
+    if (dx > threshold) goPrev();
+    if (dx < -threshold) goNext();
+  };
+
   const rentOptions = [
     { key: "daily", label: "Daily", unit: "day", value: rentPrices?.daily },
     { key: "weekly", label: "Weekly", unit: "week", value: rentPrices?.weekly },
@@ -254,7 +328,7 @@ const ItemDetails = () => {
           tabIndex={-1}
         >
           <div
-            className="relative w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl bg-white shadow-2xl"
+            className="relative w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl bg-gray-100 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
             role="button"
             tabIndex={-1}
@@ -266,11 +340,66 @@ const ItemDetails = () => {
             >
               <Close className="text-gray-800" />
             </button>
-            <img
-              src={selectedImageUrl}
-              alt={item.name}
-              className="w-full h-full max-h-[85vh] object-contain bg-black"
-            />
+            {safeImageUrls.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={goPrev}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 z-10 p-2 bg-white/90 hover:bg-white rounded-full shadow"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="text-gray-900" />
+                </button>
+                <button
+                  type="button"
+                  onClick={goNext}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 p-2 bg-white/90 hover:bg-white rounded-full shadow"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="text-gray-900" />
+                </button>
+              </>
+            )}
+
+            <div
+              className="w-full h-full max-h-[85vh] bg-gray-200 flex items-center justify-center"
+              onPointerDown={handlePreviewPointerDown}
+              onPointerUp={handlePreviewPointerUp}
+              onPointerCancel={() => {
+                dragStartXRef.current = null;
+              }}
+              onPointerLeave={() => {
+                dragStartXRef.current = null;
+              }}
+            >
+              <img
+                src={safeImageUrls[previewIndex] || selectedImageUrl}
+                alt={item.name}
+                className="max-w-full max-h-[85vh] object-contain"
+                draggable={false}
+              />
+            </div>
+
+            {safeImageUrls.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 py-2 rounded-full bg-white/80 backdrop-blur border border-gray-200 shadow">
+                {safeImageUrls.map((_, idx) => {
+                  const active = idx === previewIndex;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => goToIndex(idx)}
+                      aria-label={`Go to image ${idx + 1}`}
+                      className={`h-2.5 rounded-full transition-all ${
+                        active
+                          ? "w-6 bg-gray-900"
+                          : "w-2.5 bg-gray-400 hover:bg-gray-500"
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -290,7 +419,10 @@ const ItemDetails = () => {
                   <img
                     src={selectedImageUrl}
                     alt={item.name}
-                    onClick={() => setIsImagePreviewOpen(true)}
+                    onClick={() => {
+                      setPreviewIndex(selectedIndex);
+                      setIsImagePreviewOpen(true);
+                    }}
                     className="object-contain w-full h-full cursor-zoom-in"
                   />
                 ) : null}
@@ -301,7 +433,10 @@ const ItemDetails = () => {
                     <button
                       key={idx}
                       type="button"
-                      onClick={() => setSelectedImageUrl(img.url)}
+                      onClick={() => {
+                        setSelectedImageUrl(img.url);
+                        setPreviewIndex(idx);
+                      }}
                       className={`w-20 h-20 overflow-hidden bg-white border rounded-xl transition-colors ${
                         img.url === selectedImageUrl
                           ? "border-gray-800"
@@ -398,7 +533,49 @@ const ItemDetails = () => {
                 {item.mobileNumber && (
                   <div>
                     <strong className="block mb-1 text-gray-900">Contact Number</strong>
-                    <div>{item.mobileNumber}</div>
+                    <div
+                      className={
+                        shouldShowPhoneLoginHint
+                          ? "relative inline-block cursor-pointer select-none group"
+                          : ""
+                      }
+                    >
+                      <span
+                        className={
+                          shouldShowPhoneLoginHint
+                            ? "font-semibold text-gray-800"
+                            : ""
+                        }
+                        tabIndex={shouldShowPhoneLoginHint ? 0 : undefined}
+                        aria-label={
+                          shouldShowPhoneLoginHint
+                            ? "Login to view full phone number"
+                            : "Contact number"
+                        }
+                      >
+                        {item.mobileNumber}
+                      </span>
+                      {shouldShowPhoneLoginHint && (
+                        <div className="absolute left-0 z-20 pt-3 top-full pointer-events-none opacity-0 translate-y-1 scale-95 transition-all duration-200 ease-out group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 group-focus-within:opacity-100 group-focus-within:translate-y-0 group-focus-within:scale-100">
+                          <div className="relative w-[240px] rounded-xl border border-gray-200 bg-white p-3 shadow-lg pointer-events-auto">
+                            <div className="absolute w-3 h-3 rotate-45 bg-white border border-gray-200 -top-1.5 left-6" />
+                            <div className="text-xs font-semibold text-gray-900">
+                              Login required
+                            </div>
+                            <div className="mt-1 text-xs text-gray-600">
+                              Login to view the contact number.
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => navigate("/login")}
+                              className="inline-flex items-center justify-center px-3 py-2 mt-3 text-xs font-semibold text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                              Login
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
