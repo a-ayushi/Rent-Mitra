@@ -21,7 +21,9 @@ api.interceptors.request.use(
 
     // Do NOT send auth header for public product routes
     const url = config.url || '';
-    const isPublicProductRoute = url.startsWith('/api/products/');
+    const isPublicProductRoute =
+      url.startsWith('/api/products/getAllProducts') ||
+      url.startsWith('/api/products/get-products-by-category');
 
     if (token && !isPublicProductRoute) {
       config.headers.Authorization = `Bearer ${token}`;
