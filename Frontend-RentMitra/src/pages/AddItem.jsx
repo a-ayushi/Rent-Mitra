@@ -81,6 +81,12 @@ const AddItem = () => {
   const selectedCategory = watch("category");
   const watchedAttributes = watch("attributes") || [];
 
+  const capitalizeFirst = (s) => {
+    const str = s == null ? "" : String(s);
+    if (!str) return str;
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
   const fetchCategories = useCallback(async () => {
     try {
       const res = await categoryService.getCategories();
@@ -299,7 +305,15 @@ const AddItem = () => {
                 Item Name <span className="text-red-500">*</span>
               </label>
               <input
-                {...register("name", { required: "Item name is required" })}
+                {...register("name", {
+                  required: "Item name is required",
+                  onChange: (e) => {
+                    if (!watchedValues?.name && e?.target?.value) {
+                      e.target.value = capitalizeFirst(e.target.value);
+                    }
+                  },
+                })}
+                autoCapitalize="words"
                 placeholder="e.g., Canon EOS R5 Camera"
                 className={`w-full px-4 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 ${
                   errors.name ? "border-red-500" : "border-gray-300 hover:border-gray-400"
@@ -321,7 +335,13 @@ const AddItem = () => {
                     value: 20,
                     message: "Description must be at least 20 characters",
                   },
+                  onChange: (e) => {
+                    if (!watchedValues?.message && e?.target?.value) {
+                      e.target.value = capitalizeFirst(e.target.value);
+                    }
+                  },
                 })}
+                autoCapitalize="sentences"
                 rows="4"
                 placeholder="Describe your item in detail..."
                 className={`w-full px-4 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 ${
@@ -409,7 +429,14 @@ const AddItem = () => {
                   Brand
                 </label>
                 <input
-                  {...register("brand")}
+                  {...register("brand", {
+                    onChange: (e) => {
+                      if (!watchedValues?.brand && e?.target?.value) {
+                        e.target.value = capitalizeFirst(e.target.value);
+                      }
+                    },
+                  })}
+                  autoCapitalize="words"
                   placeholder="e.g., Canon, Apple, etc."
                   className="w-full px-4 py-3 transition-colors border border-gray-300 rounded-lg hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
                 />
@@ -424,8 +451,12 @@ const AddItem = () => {
                 <div className="flex gap-3">
                   <input
                     value={attributeInput}
+                    autoCapitalize="words"
                     onChange={(e) => {
-                      setAttributeInput(e.target.value);
+                      const next = e.target.value;
+                      setAttributeInput(
+                        attributeInput ? next : capitalizeFirst(next)
+                      );
                       if (attributeError) setAttributeError("");
                     }}
                     onKeyDown={(e) => {
@@ -714,7 +745,14 @@ const AddItem = () => {
                   Navigation (optional)
                 </label>
                 <input
-                  {...register("navigation")}
+                  {...register("navigation", {
+                    onChange: (e) => {
+                      if (!watchedValues?.navigation && e?.target?.value) {
+                        e.target.value = capitalizeFirst(e.target.value);
+                      }
+                    },
+                  })}
+                  autoCapitalize="sentences"
                   placeholder="Landmark / directions"
                   className="w-full px-4 py-3 transition-colors border border-gray-300 rounded-lg hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
                 />
@@ -726,7 +764,15 @@ const AddItem = () => {
                 Street Address <span className="text-red-500">*</span>
               </label>
               <input
-                {...register("address", { required: "Address is required" })}
+                {...register("address", {
+                  required: "Address is required",
+                  onChange: (e) => {
+                    if (!watchedValues?.address && e?.target?.value) {
+                      e.target.value = capitalizeFirst(e.target.value);
+                    }
+                  },
+                })}
+                autoCapitalize="sentences"
                 placeholder="123 Main Street"
                 className={`w-full px-4 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 ${
                   errors.address ? "border-red-500" : "border-gray-300 hover:border-gray-400"
@@ -768,7 +814,15 @@ const AddItem = () => {
                   State <span className="text-red-500">*</span>
                 </label>
                 <input
-                  {...register("state", { required: "State is required" })}
+                  {...register("state", {
+                    required: "State is required",
+                    onChange: (e) => {
+                      if (!watchedValues?.state && e?.target?.value) {
+                        e.target.value = capitalizeFirst(e.target.value);
+                      }
+                    },
+                  })}
+                  autoCapitalize="words"
                   placeholder="Maharashtra"
                   className={`w-full px-4 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 ${
                     errors.state ? "border-red-500" : "border-gray-300 hover:border-gray-400"

@@ -104,8 +104,17 @@ const Settings = () => {
           <input
             type="text"
             id="name"
+            autoCapitalize="words"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setName((prev) => {
+                if (!prev && next) {
+                  return next.charAt(0).toUpperCase() + next.slice(1);
+                }
+                return next;
+              });
+            }}
             className="block w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500"
           />
         </div>
