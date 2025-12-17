@@ -81,6 +81,40 @@ const ItemDetails = () => {
     }
   };
 
+  const normalizePrice = (val) => {
+    if (val == null || val === "") return null;
+    const n = Number(val);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const getPrimaryRent = (it) => {
+    const rp = parseJsonMaybe(
+      it?.rentPrices ?? it?.dynamicAttributes?.rentPrices,
+      null
+    );
+
+    const daily = normalizePrice(rp?.daily ?? it?.pricePerDay ?? it?.rentBasedOnType);
+    const weekly = normalizePrice(rp?.weekly ?? it?.pricePerWeek);
+    const monthly = normalizePrice(rp?.monthly ?? it?.pricePerMonth);
+
+    if (daily != null) return { type: "daily", unit: "day", value: daily };
+    if (weekly != null) return { type: "weekly", unit: "week", value: weekly };
+    if (monthly != null) return { type: "monthly", unit: "month", value: monthly };
+    return null;
+  };
+
+  const getRentPrices = (it) => {
+    const rp = parseJsonMaybe(
+      it?.rentPrices ?? it?.dynamicAttributes?.rentPrices,
+      null
+    );
+    return {
+      daily: normalizePrice(rp?.daily ?? it?.pricePerDay ?? it?.rentBasedOnType),
+      weekly: normalizePrice(rp?.weekly ?? it?.pricePerWeek),
+      monthly: normalizePrice(rp?.monthly ?? it?.pricePerMonth),
+    };
+  };
+
   const addressParts = (() => {
     const rawParts = [
       item?.address || item?.location?.address,
@@ -102,23 +136,50 @@ const ItemDetails = () => {
     return unique;
   })();
 
+  const pincodeText = (() => {
+    const v =
+      item?.zipcode ||
+      item?.zipCode ||
+      item?.location?.zipcode ||
+      item?.location?.zipCode;
+    const s = v == null ? "" : String(v).trim();
+    return s;
+  })();
+
   const detailEntries = (() => {
     const dyn = item?.dynamicAttributes || {};
     const entries = [];
 
+    const hiddenKeys = new Set([
+      "productId",
+      "userId",
+      "categoryId",
+      "subcategoryId",
+      "address",
+      "streetAddress",
+      "city",
+      "state",
+      "zipcode",
+      "zipCode",
+      "navigation",
+      "mobileNumber",
+      "brand",
+      "rentTypes",
+      "minRentalDays",
+      "maxRentalDays",
+      "securityDeposit",
+    ]);
+
     Object.entries(dyn)
-      .filter(([key]) => key !== "rentPrices" && key !== "attributes")
+      .filter(
+        ([key]) =>
+          key !== "rentPrices" &&
+          key !== "attributes" &&
+          !hiddenKeys.has(String(key))
+      )
       .forEach(([key, value]) => {
         entries.push([key, value]);
       });
-
-    const rentPrices = parseJsonMaybe(dyn?.rentPrices, null);
-    if (rentPrices && typeof rentPrices === "object") {
-      Object.entries(rentPrices).forEach(([k, v]) => {
-        if (v === "" || v == null) return;
-        entries.push([`rentPrice (${k})`, `₹${v}`]);
-      });
-    }
 
     const attrs = parseJsonMaybe(dyn?.attributes, []);
     if (Array.isArray(attrs)) {
@@ -144,6 +205,15 @@ const ItemDetails = () => {
   const createdAtText = item?.createdAt
     ? new Date(item.createdAt).toLocaleDateString()
     : null;
+
+  const primaryRent = getPrimaryRent(item);
+  const rentPrices = getRentPrices(item);
+
+  const rentOptions = [
+    { key: "daily", label: "Daily", unit: "day", value: rentPrices?.daily },
+    { key: "weekly", label: "Weekly", unit: "week", value: rentPrices?.weekly },
+    { key: "monthly", label: "Monthly", unit: "month", value: rentPrices?.monthly },
+  ].filter((o) => o.value != null);
 
   if (loading) return <div className="p-12 text-center">Loading item...</div>;
   if (error || !item)
@@ -250,23 +320,49 @@ const ItemDetails = () => {
             <div className="flex-grow">
               <h1 className="mb-2 text-3xl font-bold">{item.name}</h1>
 
+              {item.brand && (
+                <div className="mb-2 text-sm font-semibold text-gray-600">
+                  {item.brand}
+                </div>
+              )}
+
               <div className="flex flex-wrap items-center gap-3 mb-4 text-sm text-gray-600">
                 <span className="flex items-center">
                   <Visibility className="mr-1" /> {views} views
                 </span>
                 {createdAtText && (
-                  <span className="text-xs text-gray-500">
-                    Added on {createdAtText}
-                  </span>
-                )}
-                {item.rentType && (
-                  <span className="px-2 py-1 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
-                    Rent type: {item.rentType}
-                  </span>
-                )}
-                {typeof item.rentBasedOnType === 'number' && (
-                  <span className="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">
-                    ₹{item.rentBasedOnType} / {item.rentType || 'duration'}
+                  <span className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                    <span>Added on {createdAtText}</span>
+                    {rentOptions.length > 0 && (
+                      <span className="flex flex-wrap items-center gap-2">
+                        {rentOptions.map((opt) => {
+                          const isPrimary = primaryRent?.type === opt.key;
+                          return (
+                            <span
+                              key={opt.key}
+                              className={`inline-flex items-center gap-2 px-3 py-1.5 border rounded-xl shadow-sm ${
+                                isPrimary
+                                  ? "border-green-300 bg-gradient-to-r from-green-50 to-emerald-50"
+                                  : "border-gray-200 bg-white"
+                              }`}
+                            >
+                              <span className="text-[10px] font-semibold tracking-wide text-gray-600 uppercase">
+                                {opt.label}
+                              </span>
+                              <span className={`text-sm font-bold ${isPrimary ? "text-green-700" : "text-gray-800"}`}>
+                                ₹{opt.value}
+                                <span className="ml-1 text-[10px] font-semibold text-gray-500">/{opt.unit}</span>
+                              </span>
+                              {isPrimary && (
+                                <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold text-white bg-green-600 rounded-full">
+                                  Best
+                                </span>
+                              )}
+                            </span>
+                          );
+                        })}
+                      </span>
+                    )}
                   </span>
                 )}
                 {user && item.owner && user.id !== item.owner?._id && (
@@ -288,6 +384,7 @@ const ItemDetails = () => {
                   <strong className="block mb-1 text-gray-900">Address</strong>
                   <div>
                     {addressParts.join(", ")}
+                    {pincodeText ? ` - ${pincodeText}` : ""}
                   </div>
                 </div>
 
@@ -302,6 +399,17 @@ const ItemDetails = () => {
                   <div>
                     <strong className="block mb-1 text-gray-900">Contact Number</strong>
                     <div>{item.mobileNumber}</div>
+                  </div>
+                )}
+
+                {(item.minRentalDays != null || item.maxRentalDays != null) && (
+                  <div>
+                    <strong className="block mb-1 text-gray-900">Rental Days</strong>
+                    <div>
+                      {item.minRentalDays != null ? `Min ${item.minRentalDays}` : null}
+                      {item.minRentalDays != null && item.maxRentalDays != null ? " • " : null}
+                      {item.maxRentalDays != null ? `Max ${item.maxRentalDays}` : null}
+                    </div>
                   </div>
                 )}
 
