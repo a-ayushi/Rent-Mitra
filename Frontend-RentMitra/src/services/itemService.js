@@ -1,5 +1,35 @@
 import api from './api';
 
+const decodeJwtPayload = (token) => {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length < 2) return null;
+  try {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const json = atob(padded);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+};
+
+const normalizeMobileNumber = (value) => {
+  if (value == null) return '';
+  const digits = String(value).replace(/\D/g, '');
+  if (digits.length === 10) return digits;
+  if (digits.length === 12 && digits.startsWith('91')) return digits.slice(2);
+  if (digits.length > 10) return digits.slice(-10);
+  return digits;
+};
+
+const getMobileNumberFromToken = () => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const payload = decodeJwtPayload(token);
+  const raw = payload?.sub ?? payload?.subject ?? payload?.phone ?? payload?.phoneNo ?? payload?.mobilenumber;
+  return normalizeMobileNumber(raw);
+};
+
 const normalizeImageUrls = (imageUrls) => {
   if (Array.isArray(imageUrls)) {
     return imageUrls.map((u) => (u == null ? '' : String(u).trim())).filter(Boolean);
@@ -172,6 +202,22 @@ const itemService = {
     const p = await api.get(`/api/products/get-by-id?productId=${id}`);
 
     return mapProductToItem(p, id);
+  },
+
+  getProductsByMobileNumber: async (mobileNumber) => {
+    const normalized = normalizeMobileNumber(mobileNumber);
+    const res = await api.get('/api/products/get-products-by-mobile-number', {
+      params: { mobileNumber: normalized },
+    });
+    const rawItems = Array.isArray(res) ? res : [];
+    const items = rawItems.map((p) => mapProductToItem(p));
+    return { items };
+  },
+
+  getMyOwnedProducts: async () => {
+    const mobileNumber = getMobileNumberFromToken();
+    if (!mobileNumber) return { items: [] };
+    return itemService.getProductsByMobileNumber(mobileNumber);
   },
 
   // Create item
