@@ -150,6 +150,23 @@ const itemService = {
     return { items };
   },
 
+  // Get items for a specific subcategory name (Java products API)
+  getItemsBySubcategoryName: async (subcategoryName) => {
+    const res = await api.get(
+      `/api/products/productsbysubcategory/${encodeURIComponent(subcategoryName)}`
+    );
+
+    const rawItems = Array.isArray(res)
+      ? res
+      : Array.isArray(res?.data)
+        ? res.data
+        : [];
+
+    const items = rawItems.map((p) => mapProductToItem(p));
+
+    return { items };
+  },
+
   // Get single item (Java products API)
   getItem: async (id) => {
     const p = await api.get(`/api/products/get-by-id?productId=${id}`);

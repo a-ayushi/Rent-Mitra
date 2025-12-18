@@ -1,6 +1,6 @@
 // src/pages/CategoryItems.js
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -27,6 +27,7 @@ import {
 import api from "../services/api";
 import userService from "../services/userService";
 import itemService from "../services/itemService";
+import categoryService from "../services/categoryService";
 
 import { useQueryClient } from 'react-query';
 import { useCity } from '../hooks/useCity';
@@ -34,6 +35,7 @@ import { useCity } from '../hooks/useCity';
 const CategoryItems = () => {
   const { city } = useCity();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [category, setCategory] = useState(null);
   const [subcategories, setSubcategories] = useState([]);
@@ -82,12 +84,18 @@ const CategoryItems = () => {
   const limit = 12;
   const navigate = useNavigate();
 
-  const fetchCategoryItems = useCallback(async () => { // eslint-disable-line
+  const selectedType = searchParams.get("type") || "category";
+  const selectedSubcategoryName = searchParams.get("name") || "";
 
+  const fetchCategoryItems = useCallback(async () => { // eslint-disable-line
     try {
       setLoading(true);
       setError(null);
-      const data = await itemService.getItemsByCategory(id);
+
+      const data =
+        selectedType === "subcategory" && selectedSubcategoryName
+          ? await itemService.getItemsBySubcategoryName(selectedSubcategoryName)
+          : await itemService.getItemsByCategory(id);
 
       if (data && Array.isArray(data.items)) {
         setItems(data.items);
@@ -105,12 +113,33 @@ const CategoryItems = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, page, sortBy, sortOrder, filters, city]);
+  }, [id, page, sortBy, sortOrder, filters, city, selectedType, selectedSubcategoryName]);
 
   const fetchSubcategories = useCallback(async () => {
     try {
-      const response = await api.get(`/categories/${id}/subcategories`);
-      setSubcategories(Array.isArray(response.data) ? response.data : []);
+      // Resolve category name from categoryId, then fetch subcategories by name
+      const categories = await categoryService.getCategories();
+      const arr = Array.isArray(categories)
+        ? categories
+        : Array.isArray(categories?.data)
+          ? categories.data
+          : [];
+      const cat = arr.find((c) => String(c?.categoryId) === String(id));
+      setCategory(cat || null);
+
+      const categoryName = cat?.name;
+      if (!categoryName) {
+        setSubcategories([]);
+        return;
+      }
+
+      const subRes = await categoryService.getSubcategories(categoryName);
+      const subs = Array.isArray(subRes)
+        ? subRes
+        : Array.isArray(subRes?.data)
+          ? subRes.data
+          : [];
+      setSubcategories(subs);
     } catch (err) {
       console.error("Error fetching subcategories:", err);
       setSubcategories([]);
@@ -122,7 +151,7 @@ const CategoryItems = () => {
       fetchCategoryItems();
       fetchSubcategories();
     }
-  }, [id, page, sortBy, sortOrder, filters, city]);
+  }, [id, page, sortBy, sortOrder, filters, city, fetchCategoryItems, fetchSubcategories]);
 
   const toggleFavorite = async (itemId) => {
     try {
@@ -277,8 +306,12 @@ const CategoryItems = () => {
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
               {subcategories.map((subcat) => (
                 <div
-                  key={subcat._id}
-                  onClick={() => navigate(`/category/${subcat._id}`)}
+                  key={subcat.subcategoryId || subcat._id || subcat.id}
+                  onClick={() => {
+                    const name = subcat?.name || "";
+                    const encoded = encodeURIComponent(name);
+                    navigate(`/category/${id}?type=subcategory&name=${encoded}`);
+                  }}
                   className="p-5 text-center transition-all bg-white border border-gray-100 cursor-pointer rounded-xl hover:shadow-lg hover:-translate-y-1 group"
                 >
                   <div className="mb-3 text-4xl transition-transform group-hover:scale-110">

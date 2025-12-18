@@ -431,8 +431,9 @@ const Navbar = () => {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setCategoryDropdownOpen(false);
-                                      // For now, also navigate with subcategoryId so it is never undefined
-                                      navigate(`/category/${sub.subcategoryId || sub._id}`);
+                                      const name = sub?.name || "";
+                                      const encoded = encodeURIComponent(name);
+                                      navigate(`/category/${cat.categoryId}?type=subcategory&name=${encoded}`);
                                     }}
                                     className="text-xs text-gray-600 transition-colors hover:text-gray-900 hover:underline"
                                   >

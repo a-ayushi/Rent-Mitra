@@ -230,40 +230,48 @@ const AddItem = () => {
       const categoryId = data.category ? Number(data.category) : undefined;
       const subcategoryId = data.subcategory ? Number(data.subcategory) : undefined;
 
-      const addressString = [
-        data.address,
-        data.city,
-        data.state,
-        data.zipCode ? `- ${data.zipCode}` : undefined,
-      ]
-        .filter(Boolean)
-        .join(", ");
-
       const productRequest = {
         name: data.name,
+        description: data.message || undefined,
         brand: data.brand || undefined,
+        condition: data.condition || undefined,
+        mobilenumber: data.mobileNumber || undefined,
         categoryId,
         subcategoryId,
-        rentType:
-          Array.isArray(data.rentTypes) && data.rentTypes.length > 0
-            ? String(data.rentTypes[0])
-            : "daily",
-        rentBasedOnType: (() => {
+        rentTypes: Array.isArray(data.rentTypes) ? data.rentTypes : [],
+        rentPrices: (() => {
           const types = Array.isArray(data.rentTypes) ? data.rentTypes : [];
-          const primary = types.length > 0 ? String(types[0]) : "daily";
-          const val = data?.rentPrices?.[primary];
-          return val ? Number(val) : undefined;
+          const prices = data?.rentPrices || {};
+          const selected = {};
+          types.forEach((t) => {
+            const key = String(t);
+            const raw = prices?.[key];
+            if (raw !== "" && raw != null) {
+              selected[key] = Number(raw);
+            }
+          });
+          return selected;
         })(),
-        address: addressString || undefined,
+        securityDeposit:
+          data.securityDeposit === "" || data.securityDeposit == null
+            ? undefined
+            : Number(data.securityDeposit),
+        minRentalDays:
+          data.minimumRentalPeriod === "" || data.minimumRentalPeriod == null
+            ? 0
+            : Number(data.minimumRentalPeriod),
+        maxRentalDays:
+          data.maximumRentalPeriod === "" || data.maximumRentalPeriod == null
+            ? 0
+            : Number(data.maximumRentalPeriod),
         navigation: data.navigation || undefined,
-        message: data.message || undefined,
-        mobileNumber: data.mobileNumber || undefined,
-        dynamicAttributes: {
+        streetAddress: data.address || undefined,
+        city: data.city || undefined,
+        state: data.state || undefined,
+        zipcode: data.zipCode || undefined,
+        attributes: JSON.stringify({
           condition: data.condition || "",
-          securityDeposit: data.securityDeposit ? String(data.securityDeposit) : "",
-          minimumRentalPeriod: data.minimumRentalPeriod ? String(data.minimumRentalPeriod) : "",
-          maximumRentalPeriod: data.maximumRentalPeriod ? String(data.maximumRentalPeriod) : "",
-          instantBooking: typeof data.instantBooking === "boolean" ? String(data.instantBooking) : "",
+          instantBooking: typeof data.instantBooking === "boolean" ? data.instantBooking : false,
           rentPrices: (() => {
             const types = Array.isArray(data.rentTypes) ? data.rentTypes : [];
             const prices = data?.rentPrices || {};
@@ -271,10 +279,10 @@ const AddItem = () => {
             types.forEach((t) => {
               selected[String(t)] = prices?.[String(t)] ?? "";
             });
-            return JSON.stringify(selected);
+            return selected;
           })(),
-          attributes: JSON.stringify(Array.isArray(data.attributes) ? data.attributes : []),
-        },
+          attributes: Array.isArray(data.attributes) ? data.attributes : [],
+        }),
       };
 
       // Controller expects @RequestPart("data") ProductRequest data
