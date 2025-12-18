@@ -23,11 +23,38 @@ const normalizeMobileNumber = (value) => {
   return digits;
 };
 
+const getMobileCandidates = (value) => {
+  const raw = value == null ? '' : String(value).trim();
+  const digits10 = normalizeMobileNumber(raw);
+
+  // DB stores plain 10-digit numbers, so try that FIRST.
+  // Only include country-code variants if we actually have 10 digits.
+  const candidates = [];
+  if (digits10 && digits10.length === 10) {
+    candidates.push(digits10, raw, `+91${digits10}`, `91${digits10}`);
+  } else {
+    // If we cannot derive a phone number, only try raw (prevents calls like mobileNumber=+91)
+    candidates.push(raw);
+  }
+
+  return Array.from(
+    new Set(
+      candidates
+        .map((v) => (v == null ? '' : String(v).trim()))
+        .filter(Boolean)
+    )
+  );
+};
+
 const getMobileNumberFromToken = () => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const payload = decodeJwtPayload(token);
   const raw = payload?.sub ?? payload?.subject ?? payload?.phone ?? payload?.phoneNo ?? payload?.mobilenumber;
-  return normalizeMobileNumber(raw);
+
+  // If subject is an email, do not attempt mobile lookup.
+  const str = raw == null ? '' : String(raw);
+  if (str.includes('@')) return '';
+  return str;
 };
 
 const normalizeImageUrls = (imageUrls) => {
@@ -205,12 +232,31 @@ const itemService = {
   },
 
   getProductsByMobileNumber: async (mobileNumber) => {
-    const normalized = normalizeMobileNumber(mobileNumber);
-    const res = await api.get('/api/products/get-products-by-mobile-number', {
-      params: { mobileNumber: normalized },
-    });
-    const rawItems = Array.isArray(res) ? res : [];
-    const items = rawItems.map((p) => mapProductToItem(p));
+    const candidates = getMobileCandidates(mobileNumber);
+    const all = [];
+
+    for (const candidate of candidates) {
+      const res = await api.get('/api/products/get-products-by-mobile-number', {
+        params: { mobileNumber: candidate },
+      });
+
+      const rawItems = Array.isArray(res) ? res : [];
+      if (rawItems.length > 0) {
+        rawItems.forEach((p) => all.push(p));
+        break;
+      }
+    }
+
+    const seen = new Set();
+    const items = all
+      .map((p) => mapProductToItem(p))
+      .filter((it) => {
+        const key = it?._id == null ? '' : String(it._id);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
     return { items };
   },
 
