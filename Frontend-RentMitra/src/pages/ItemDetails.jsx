@@ -111,6 +111,23 @@ const ItemDetails = () => {
     }
   };
 
+  const formatDetailLabel = (key) => {
+    const raw = key == null ? "" : String(key);
+    const cleaned = raw
+      .replace(/_/g, " ")
+      .replace(/-/g, " ")
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (!cleaned) return raw;
+
+    return cleaned
+      .split(" ")
+      .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+      .join(" ");
+  };
+
   const normalizePrice = (val) => {
     if (val == null || val === "") return null;
     const n = Number(val);
@@ -328,7 +345,7 @@ const ItemDetails = () => {
           tabIndex={-1}
         >
           <div
-            className="relative w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl bg-gray-100 shadow-2xl"
+            className="relative w-full max-w-4xl h-[70vh] sm:h-[75vh] max-h-[85vh] overflow-hidden rounded-2xl bg-gray-100 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
             role="button"
             tabIndex={-1}
@@ -362,7 +379,7 @@ const ItemDetails = () => {
             )}
 
             <div
-              className="w-full h-full max-h-[85vh] bg-gray-200 flex items-center justify-center"
+              className="w-full h-full bg-gray-200 flex items-center justify-center"
               onPointerDown={handlePreviewPointerDown}
               onPointerUp={handlePreviewPointerUp}
               onPointerCancel={() => {
@@ -375,7 +392,7 @@ const ItemDetails = () => {
               <img
                 src={safeImageUrls[previewIndex] || selectedImageUrl}
                 alt={item.name}
-                className="max-w-full max-h-[85vh] object-contain"
+                className="w-full h-full object-contain"
                 draggable={false}
               />
             </div>
@@ -607,7 +624,9 @@ const ItemDetails = () => {
                         key={`${key}-${idx}`}
                         className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg"
                       >
-                        <span className="font-medium text-gray-700">{key}</span>
+                        <span className="font-medium text-gray-700">
+                          {formatDetailLabel(key)}
+                        </span>
                         <span className="text-gray-800">{String(value)}</span>
                       </div>
                     ))}
