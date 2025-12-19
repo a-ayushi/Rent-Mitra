@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -61,6 +61,84 @@ const BeautifulRentalHome = () => {
   useEffect(() => {
     fetchData();
   }, [city]);
+
+  const sectionElsRef = useRef([]);
+  const rafRef = useRef(0);
+
+  const setSectionRef = (idx) => (el) => {
+    sectionElsRef.current[idx] = el;
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+    if (prefersReducedMotion) return;
+
+    const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+    const update = () => {
+      const vh = window.innerHeight || 1;
+
+      sectionElsRef.current.forEach((el, idx) => {
+        if (!el) return;
+
+        const rect = el.getBoundingClientRect();
+        const mid = rect.top + rect.height / 2 - vh / 2;
+        const d = clamp(mid / (vh * 0.85), -1, 1);
+
+        const abs = Math.abs(d);
+
+        const below = clamp(d, 0, 1);
+        const above = clamp(-d, 0, 1);
+
+        const enterT = easeOutCubic(1 - abs);
+
+        const isHero = idx === 0;
+
+        // Keep the hero pinned in place (no translate/rotate). Transforms do not affect layout,
+        // so moving the hero creates a visible "gap" above it.
+        const zBase = -480;
+        const z = isHero ? 0 : (lerp(zBase, 0, enterT) + lerp(0, 140, above * 0.75));
+        const rotateX = isHero ? 0 : (lerp(10, 0, enterT) - above * 7);
+        const y = isHero ? 0 : (lerp(32, 0, enterT) - above * 9);
+
+        const minOpacity = isHero ? 1 : 0.5;
+        const opacity = isHero ? 1 : clamp(minOpacity + enterT * (1 - minOpacity), minOpacity, 1);
+
+        const maxBlur = 2.2;
+        const blurPx = isHero ? 0 : lerp(maxBlur, 0, enterT);
+
+        el.style.transformStyle = "preserve-3d";
+        el.style.willChange = "transform, opacity, filter";
+        el.style.transform = `translate3d(0px, ${y}px, ${z}px) rotateX(${rotateX}deg)`;
+        el.style.opacity = String(opacity);
+        el.style.filter = `blur(${blurPx}px)`;
+
+        if (below > 0.9) {
+          el.style.pointerEvents = "none";
+        } else {
+          el.style.pointerEvents = "auto";
+        }
+      });
+    };
+
+    const tick = () => {
+      update();
+      rafRef.current = window.requestAnimationFrame(tick);
+    };
+
+    update();
+    rafRef.current = window.requestAnimationFrame(tick);
+
+    const onResize = () => update();
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const fetchData = async () => {
     setLoading(true);
@@ -173,9 +251,9 @@ const BeautifulRentalHome = () => {
   );
 
   return (
-    <div className="bg-white">
+    <div className="bg-white" style={{ perspective: "1200px", perspectiveOrigin: "center center" }}>
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white overflow-hidden">
+      <section ref={setSectionRef(0)} className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white overflow-hidden">
         <div className="absolute inset-0 bg-grid-white/5"></div>
         <div className="relative container mx-auto px-4 py-6 lg:py-12">
           <div className="max-w-4xl mx-auto text-center">
@@ -257,7 +335,7 @@ const BeautifulRentalHome = () => {
       </section>
 
       {/* Categories Section */}
-      <section className="py-12 bg-gray-50">
+      <section ref={setSectionRef(1)} className="py-12 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
@@ -295,7 +373,7 @@ const BeautifulRentalHome = () => {
       </section>
 
       {/* Featured Rentals */}
-      <section className="py-16 bg-white">
+      <section ref={setSectionRef(2)} className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-12">
             <div>
@@ -379,7 +457,7 @@ const BeautifulRentalHome = () => {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-16 bg-gradient-to-br from-gray-900 to-black text-white">
+      <section ref={setSectionRef(3)} className="py-16 bg-gradient-to-br from-gray-900 to-black text-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-3">
@@ -408,7 +486,7 @@ const BeautifulRentalHome = () => {
       </section>
 
       {/* How It Works */}
-      <section className="py-16 bg-white">
+      <section ref={setSectionRef(4)} className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
@@ -443,7 +521,7 @@ const BeautifulRentalHome = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-blue-600 to-purple-600">
+      <section ref={setSectionRef(5)} className="py-16 bg-gradient-to-r from-blue-600 to-purple-600">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
             Have Items to Rent Out?

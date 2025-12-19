@@ -23,7 +23,10 @@ api.interceptors.request.use(
     const url = config.url || '';
     const isPublicProductRoute =
       url.startsWith('/api/products/getAllProducts') ||
-      url.startsWith('/api/products/get-products-by-category');
+      url.startsWith('/api/products/get-products-by-category') ||
+      url.startsWith('/api/products/categories') ||
+      url.startsWith('/api/products/subcategories') ||
+      url.startsWith('/api/products/category-names');
 
     if (token && !isPublicProductRoute) {
       config.headers.Authorization = `Bearer ${token}`;

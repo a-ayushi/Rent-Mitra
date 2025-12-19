@@ -177,21 +177,79 @@ const mapProductToItem = (p, fallbackId) => {
 const itemService = {
   // Get items with filters
   getItems: async (params) => {
-    const products = await api.get('/api/products/getAllProducts');
+    const limit = typeof params?.limit === 'number' ? params.limit : undefined;
 
-    const rawItems = Array.isArray(products) ? products : [];
+    try {
+      const products = await api.get('/api/products/getAllProducts');
 
-    // Map Java ProductDto -> shape expected by existing React UI / ItemCard
-    const items = rawItems.map((p) => mapProductToItem(p));
+      const rawItems = Array.isArray(products) ? products : [];
 
-    return {
-      items,
-      pagination: {
-        total: items.length,
-        pages: 1,
-        page: 1,
-      },
-    };
+      // Map Java ProductDto -> shape expected by existing React UI / ItemCard
+      const items = rawItems.map((p) => mapProductToItem(p));
+      const sliced = limit ? items.slice(0, limit) : items;
+
+      return {
+        items: sliced,
+        pagination: {
+          total: sliced.length,
+          pages: 1,
+          page: 1,
+        },
+      };
+    } catch (e) {
+      try {
+        let categoryIds = [];
+        if (params?.categoryId != null) {
+          categoryIds = [params.categoryId];
+        } else {
+          const categories = await api.get('/api/products/categories');
+          categoryIds = Array.isArray(categories)
+            ? categories
+                .map((c) => c?.categoryId)
+                .filter((id) => id != null)
+            : [];
+        }
+
+        const collected = [];
+        const maxCategoriesToFetch = 6;
+
+        for (const categoryId of categoryIds.slice(0, maxCategoriesToFetch)) {
+          try {
+            const productsByCat = await api.get('/api/products/get-products-by-category', {
+              params: { categoryId },
+            });
+            if (Array.isArray(productsByCat)) {
+              collected.push(...productsByCat);
+            }
+          } catch {
+            // ignore and continue
+          }
+
+          if (limit && collected.length >= limit) break;
+        }
+
+        const items = collected.map((p) => mapProductToItem(p));
+        const sliced = limit ? items.slice(0, limit) : items;
+
+        return {
+          items: sliced,
+          pagination: {
+            total: sliced.length,
+            pages: 1,
+            page: 1,
+          },
+        };
+      } catch {
+        return {
+          items: [],
+          pagination: {
+            total: 0,
+            pages: 1,
+            page: 1,
+          },
+        };
+      }
+    }
   },
 
   // Get items for a specific category (Java products API)

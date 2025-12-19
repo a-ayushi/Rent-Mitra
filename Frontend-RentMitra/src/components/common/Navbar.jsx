@@ -33,6 +33,18 @@ const Navbar = () => {
     location.pathname === "/register" ||
     isForgotPasswordRoute;
 
+  const isActiveRoute = (path) => {
+    if (path === "/") return location.pathname === "/";
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  };
+
+  const glowClass = (active, tone = "blue") => {
+    if (!active) return "";
+    if (tone === "red") return "bg-red-50 text-red-600 ring-1 ring-red-200 shadow-[0_0_18px_rgba(239,68,68,0.25)]";
+    if (tone === "purple") return "bg-purple-50 text-purple-700 ring-1 ring-purple-200 shadow-[0_0_18px_rgba(168,85,247,0.22)]";
+    return "bg-blue-50 text-blue-700 ring-1 ring-blue-200 shadow-[0_0_18px_rgba(59,130,246,0.22)]";
+  };
+
   // Chat modal state
   const [chatModalOpen, setChatModalOpen] = useState(false);
   const [userChats, setUserChats] = useState([]);
@@ -311,7 +323,7 @@ const Navbar = () => {
             {!isForgotPasswordRoute && (
               <button
                 onClick={() => navigate("/favorites")}
-                className="p-2 text-gray-600 transition-colors rounded-md hover:text-red-500 hover:bg-red-50"
+                className={`p-2 text-gray-600 transition-colors rounded-md hover:text-red-500 hover:bg-red-50 ${glowClass(isActiveRoute("/favorites"), "red")}`}
                 title="Favourites"
               >
                 <FavoriteBorder className="w-5 h-5" />
@@ -321,7 +333,7 @@ const Navbar = () => {
             {!isForgotPasswordRoute && (
               <button
                 onClick={() => navigate("/messages")}
-                className="p-2 text-gray-600 transition-colors rounded-md hover:text-blue-500 hover:bg-blue-50"
+                className={`p-2 text-gray-600 transition-colors rounded-md hover:text-blue-500 hover:bg-blue-50 ${glowClass(isActiveRoute("/messages"), "blue")}`}
                 title="Chat"
               >
                 <ChatBubbleOutline className="w-5 h-5" />
@@ -334,7 +346,7 @@ const Navbar = () => {
                 {/* Dashboard link */}
                 <button
                   onClick={() => navigate("/dashboard")}
-                  className="hidden px-3 py-2 text-sm font-medium text-gray-700 transition-colors rounded-md lg:block hover:text-gray-900 hover:bg-gray-100"
+                  className={`hidden px-3 py-2 text-sm font-medium text-gray-700 transition-colors rounded-md lg:block hover:text-gray-900 hover:bg-gray-100 ${glowClass(isActiveRoute("/dashboard"), "purple")}`}
                 >
                   Dashboard
                 </button>
@@ -342,7 +354,7 @@ const Navbar = () => {
                 {/* Notifications - Desktop */}
                 <button 
                   onClick={() => navigate("/notifications")}
-                  className="hidden p-2 text-gray-600 transition-colors rounded-md lg:block hover:text-gray-800 hover:bg-gray-100"
+                  className={`hidden p-2 text-gray-600 transition-colors rounded-md lg:block hover:text-gray-800 hover:bg-gray-100 ${glowClass(isActiveRoute("/notifications"), "blue")}`}
                   title="Notifications"
                 >
                   <NotificationsNone className="w-5 h-5" />
@@ -366,7 +378,7 @@ const Navbar = () => {
             ) : (
               <button
                 onClick={() => navigate("/login")}
-                className="px-3 py-2 text-sm font-medium text-gray-700 transition-colors rounded-md lg:px-4 hover:text-gray-900 hover:bg-gray-100"
+                className={`px-3 py-2 text-sm font-medium text-gray-700 transition-colors rounded-md lg:px-4 hover:text-gray-900 hover:bg-gray-100 ${glowClass(isActiveRoute("/login"), "blue")}`}
               >
                 Login
               </button>
@@ -376,10 +388,10 @@ const Navbar = () => {
             {!isForgotPasswordRoute && (
               <button
                 onClick={() => navigate("/add-item")}
-                className="flex items-center gap-1 px-4 py-2 text-sm font-bold text-white transition-colors bg-gray-900 rounded-full shadow-md lg:gap-2 lg:px-6 hover:bg-gray-800 hover:shadow-lg"
+                className={`flex items-center gap-1 px-4 py-2 text-sm font-bold text-white transition-colors bg-gray-900 rounded-full shadow-md lg:gap-2 lg:px-6 hover:bg-gray-800 hover:shadow-lg ${isActiveRoute("/add-item") ? "shadow-[0_0_22px_rgba(59,130,246,0.35)] ring-2 ring-blue-300" : ""}`}
               >
                 <Add className="w-4 h-4" />
-                <span className="hidden sm:block">RENT</span>
+                <span className="hidden sm:block">Become a Renter</span>
               </button>
             )}
 
@@ -508,7 +520,7 @@ const Navbar = () => {
                   navigate("/favorites");
                   setMobileMenuOpen(false);
                 }}
-                className="flex items-center w-full gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md hover:text-red-500 hover:bg-red-50"
+                className={`flex items-center w-full gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md hover:text-red-500 hover:bg-red-50 ${glowClass(isActiveRoute("/favorites"), "red")}`}
               >
                 <FavoriteBorder className="w-4 h-4" />
                 Favourites
@@ -519,7 +531,7 @@ const Navbar = () => {
                   navigate("/messages");
                   setMobileMenuOpen(false);
                 }}
-                className="flex items-center w-full gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md hover:text-blue-500 hover:bg-blue-50"
+                className={`flex items-center w-full gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md hover:text-blue-500 hover:bg-blue-50 ${glowClass(isActiveRoute("/messages"), "blue")}`}
               >
                 <ChatBubbleOutline className="w-4 h-4" />
                 Chat
@@ -560,7 +572,7 @@ const Navbar = () => {
                       navigate("/messages");
                       setMobileMenuOpen(false);
                     }}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md hover:text-gray-900 hover:bg-gray-50"
+                    className={`flex items-center gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md hover:text-gray-900 hover:bg-gray-50 ${glowClass(isActiveRoute("/messages"), "blue")}`}
                   >
                     <ChatBubbleOutline className="w-4 h-4" />
                     Messages
@@ -570,7 +582,7 @@ const Navbar = () => {
                       navigate("/notifications");
                       setMobileMenuOpen(false);
                     }}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md hover:text-gray-900 hover:bg-gray-50"
+                    className={`flex items-center gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md hover:text-gray-900 hover:bg-gray-50 ${glowClass(isActiveRoute("/notifications"), "blue")}`}
                   >
                     <NotificationsNone className="w-4 h-4" />
                     Notifications
