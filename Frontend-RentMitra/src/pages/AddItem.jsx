@@ -235,7 +235,7 @@ const AddItem = () => {
         description: data.message || undefined,
         brand: data.brand || undefined,
         condition: data.condition || undefined,
-        mobilenumber: data.mobileNumber || undefined,
+        mobileNumber: data.mobileNumber || undefined,
         categoryId,
         subcategoryId,
         rentTypes: Array.isArray(data.rentTypes) ? data.rentTypes : [],
