@@ -38,7 +38,18 @@ const Login = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const from = location.state?.from?.pathname || "/";
+  const params = new URLSearchParams(location.search);
+  const redirectParam = params.get("redirect");
+  const storedRedirect =
+    typeof window !== "undefined" ? window.sessionStorage.getItem("postLoginRedirect") : null;
+  const from = redirectParam || storedRedirect || location.state?.from?.pathname || "/";
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (redirectParam) {
+      window.sessionStorage.setItem("postLoginRedirect", redirectParam);
+    }
+  }, [redirectParam]);
 
   const {
     register,
@@ -65,6 +76,10 @@ const Login = () => {
 
   const handleGoogleLogin = () => {
     const backendBase = import.meta.env.VITE_API_URL || "http://localhost:8086";
+    if (typeof window !== "undefined") {
+      const target = from || "/";
+      window.sessionStorage.setItem("postLoginRedirect", target);
+    }
     window.location.href = `${backendBase}/oauth2/authorization/google`;
   };
 
@@ -87,6 +102,9 @@ const Login = () => {
           },
         });
         const target = from || "/";
+        if (typeof window !== "undefined") {
+          window.sessionStorage.removeItem("postLoginRedirect");
+        }
         if (typeof window !== "undefined") {
           window.location.href = target;
         } else {
@@ -113,6 +131,7 @@ const Login = () => {
       await login(credentials); // single login call via AuthContext
       navigate(from, { replace: true });
       if (typeof window !== 'undefined') {
+        window.sessionStorage.removeItem('postLoginRedirect');
         window.location.reload();
       }
     } catch (err) {
@@ -299,8 +318,9 @@ const Login = () => {
                       if (resp.status === "success" && resp.jwt) {
                         // Store JWT and mark user as logged in
                         await login({ token: resp.jwt });
-                        navigate("/");
+                        navigate(from, { replace: true });
                         if (typeof window !== 'undefined') {
+                          window.sessionStorage.removeItem('postLoginRedirect');
                           window.location.reload();
                         }
                       } else {

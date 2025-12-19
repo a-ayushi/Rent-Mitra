@@ -387,7 +387,7 @@ const Navbar = () => {
             {/* RENT Button (hidden on forgot-password) */}
             {!isForgotPasswordRoute && (
               <button
-                onClick={() => navigate("/add-item")}
+                onClick={() => navigate("/become-a-renter")}
                 className={`flex items-center gap-1 px-4 py-2 text-sm font-bold text-white transition-colors bg-gray-900 rounded-full shadow-md lg:gap-2 lg:px-6 hover:bg-gray-800 hover:shadow-lg ${isActiveRoute("/add-item") ? "shadow-[0_0_22px_rgba(59,130,246,0.35)] ring-2 ring-blue-300" : ""}`}
               >
                 <Add className="w-4 h-4" />

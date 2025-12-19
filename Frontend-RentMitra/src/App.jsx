@@ -46,6 +46,7 @@ import CategoryItems from "./pages/CategoryItems";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Terms from "./pages/Terms";
+import BecomeRenter from "./pages/BecomeRenter";
 
 // Create theme
 const theme = createTheme({
@@ -107,6 +108,7 @@ const AppContent = () => {
                         <Route path="/register" element={<Register />} />
                         <Route path="/search" element={<Search />} />
                         <Route path="/categories" element={<Categories />} />
+                        <Route path="/become-a-renter" element={<BecomeRenter />} />
                         <Route
                           path="/categories/:category"
                           element={<Search />}
