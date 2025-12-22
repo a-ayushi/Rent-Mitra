@@ -174,11 +174,112 @@ const mapProductToItem = (p, fallbackId) => {
   };
 };
 
+const getItemPrice = (item) => {
+  const direct = item?.pricePerDay;
+  if (typeof direct === 'number' && Number.isFinite(direct)) return direct;
+
+  const rp = item?.rentPrices;
+  if (rp && typeof rp === 'object') {
+    const values = Object.values(rp)
+      .map((v) => (typeof v === 'number' ? v : Number(v)))
+      .filter((v) => Number.isFinite(v));
+    if (values.length > 0) return Math.min(...values);
+  }
+
+  return null;
+};
+
+const getCreatedAtMs = (it) => {
+  const raw = it?.createdAt ?? it?.createdOn ?? it?.createdDate;
+  if (!raw) return 0;
+  const t = new Date(raw).getTime();
+  return Number.isFinite(t) ? t : 0;
+};
+
+const applyClientFilters = (items, params) => {
+  const searchRaw = params?.search ?? params?.q ?? '';
+  const search = String(searchRaw).trim().toLowerCase();
+
+  const category = params?.categoryId ?? params?.category;
+  const subcategory = params?.subcategoryId ?? params?.subcategory;
+  const city = params?.city == null ? '' : String(params.city).trim().toLowerCase();
+
+  const minPriceRaw = params?.minPrice;
+  const maxPriceRaw = params?.maxPrice;
+  const minPrice = minPriceRaw === '' || minPriceRaw == null ? null : Number(minPriceRaw);
+  const maxPrice = maxPriceRaw === '' || maxPriceRaw == null ? null : Number(maxPriceRaw);
+
+  const sortBy = params?.sortBy == null ? 'newest' : String(params.sortBy);
+  const page = params?.page == null ? 1 : Math.max(1, Number(params.page) || 1);
+  const limit = params?.limit == null ? undefined : Math.max(1, Number(params.limit) || 1);
+
+  const filtered = (Array.isArray(items) ? items : []).filter((it) => {
+    if (search) {
+      const hay = [it?.name, it?.title, it?.description, it?.brand]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+
+    if (category != null && String(category).trim() !== '') {
+      if (String(it?.categoryId ?? it?.category?._id ?? it?.category) !== String(category)) return false;
+    }
+    if (subcategory != null && String(subcategory).trim() !== '') {
+      if (String(it?.subcategoryId ?? it?.subcategory?._id ?? it?.subcategory) !== String(subcategory)) return false;
+    }
+
+    if (city) {
+      const itCity = it?.location?.city ?? it?.city;
+      if (!itCity || String(itCity).trim().toLowerCase() !== city) return false;
+    }
+
+    const price = getItemPrice(it);
+    if (minPrice != null && Number.isFinite(minPrice)) {
+      if (price == null || price < minPrice) return false;
+    }
+    if (maxPrice != null && Number.isFinite(maxPrice)) {
+      if (price == null || price > maxPrice) return false;
+    }
+
+    return true;
+  });
+
+  const sorted = filtered.slice().sort((a, b) => {
+    if (sortBy === 'price_low') {
+      return (getItemPrice(a) ?? Number.POSITIVE_INFINITY) - (getItemPrice(b) ?? Number.POSITIVE_INFINITY);
+    }
+    if (sortBy === 'price_high') {
+      return (getItemPrice(b) ?? Number.NEGATIVE_INFINITY) - (getItemPrice(a) ?? Number.NEGATIVE_INFINITY);
+    }
+    if (sortBy === 'rating') {
+      return (Number(b?.rating) || 0) - (Number(a?.rating) || 0);
+    }
+
+    return getCreatedAtMs(b) - getCreatedAtMs(a);
+  });
+
+  const total = sorted.length;
+  const pages = limit ? Math.max(1, Math.ceil(total / limit)) : 1;
+  const clampedPage = Math.min(page, pages);
+  const start = limit ? (clampedPage - 1) * limit : 0;
+  const end = limit ? start + limit : undefined;
+  const pageItems = limit ? sorted.slice(start, end) : sorted;
+
+  return {
+    items: pageItems,
+    pagination: {
+      total,
+      pages,
+      page: clampedPage,
+    },
+  };
+};
+
 const itemService = {
+
   // Get items with filters
   getItems: async (params) => {
-    const limit = typeof params?.limit === 'number' ? params.limit : undefined;
-
     try {
       const products = await api.get('/api/products/getAllProducts');
 
@@ -186,23 +287,17 @@ const itemService = {
 
       // Map Java ProductDto -> shape expected by existing React UI / ItemCard
       const items = rawItems.map((p) => mapProductToItem(p));
-      const sliced = limit ? items.slice(0, limit) : items;
 
-      return {
-        items: sliced,
-        pagination: {
-          total: sliced.length,
-          pages: 1,
-          page: 1,
-        },
-      };
+      return applyClientFilters(items, params);
     } catch (e) {
       try {
+        const limit = typeof params?.limit === 'number' ? params.limit : undefined;
         let categoryIds = [];
         if (params?.categoryId != null) {
           categoryIds = [params.categoryId];
         } else {
           const categories = await api.get('/api/products/categories');
+
           categoryIds = Array.isArray(categories)
             ? categories
                 .map((c) => c?.categoryId)
@@ -229,16 +324,8 @@ const itemService = {
         }
 
         const items = collected.map((p) => mapProductToItem(p));
-        const sliced = limit ? items.slice(0, limit) : items;
 
-        return {
-          items: sliced,
-          pagination: {
-            total: sliced.length,
-            pages: 1,
-            page: 1,
-          },
-        };
+        return applyClientFilters(items, params);
       } catch {
         return {
           items: [],
@@ -287,6 +374,27 @@ const itemService = {
     const p = await api.get(`/api/products/get-by-id?productId=${id}`);
 
     return mapProductToItem(p, id);
+  },
+
+  editProduct: async (productRequest, files = []) => {
+    const formData = new FormData();
+
+    (Array.isArray(files) ? files : []).forEach((file) => {
+      if (file) {
+        formData.append('files', file);
+      }
+    });
+
+    formData.append(
+      'data',
+      new Blob([JSON.stringify(productRequest || {})], { type: 'application/json' })
+    );
+
+    return api.patch('/api/products/editproduct', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
   },
 
   getProductsByMobileNumber: async (mobileNumber) => {

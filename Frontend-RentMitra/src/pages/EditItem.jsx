@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import api from "../services/api";
+import itemService from "../services/itemService";
 import {
   CloudUpload,
   Delete,
@@ -27,16 +27,20 @@ const EditItem = () => {
 
   const fetchItemData = useCallback(async () => {
     try {
-      const response = await api.get(`/items/${id}`);
-      const item = response.data.data;
+      const item = await itemService.getItem(id);
       if (!item) {
         setSubmitError("Item not found or could not be loaded.");
         return;
       }
-      reset(item);
+      reset({
+        name: item?.name ?? "",
+        description: item?.description ?? "",
+        brand: item?.brand ?? "",
+        condition: item?.condition ?? "",
+      });
       setName(item.name || "");
-      setSelectedCategory(item.category?._id || item.category || "");
-      setSelectedSubcategory(item.subcategory?._id || item.subcategory || "");
+      setSelectedCategory(item?.categoryId != null ? String(item.categoryId) : "");
+      setSelectedSubcategory(item?.subcategoryId != null ? String(item.subcategoryId) : "");
       setImagePreviews(Array.isArray(item.images) ? item.images.map((img) => img.url) : []);
     } catch (error) {
       console.error("Failed to fetch item data", error);
@@ -44,34 +48,9 @@ const EditItem = () => {
     }
   }, [id, reset]);
 
-  const fetchCategories = useCallback(async () => {
-    try {
-      const response = await api.get("/categories");
-      // setCategories(response.data.filter((cat) => !cat.parentCategory)); // This line was removed
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-    }
-  }, []);
-
-  const fetchSubcategories = useCallback(async (categoryId) => {
-    try {
-      const response = await api.get(`/categories/${categoryId}/subcategories`);
-      // setSubcategories(response.data || []); // This line was removed
-    } catch (error) {
-      console.error("Error fetching subcategories:", error);
-    }
-  }, []);
-
   useEffect(() => {
     fetchItemData();
-    fetchCategories();
-  }, [fetchItemData, fetchCategories]);
-
-  useEffect(() => {
-    if (selectedCategory) {
-      fetchSubcategories(selectedCategory);
-    }
-  }, [selectedCategory, fetchSubcategories]);
+  }, [fetchItemData]);
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
@@ -91,32 +70,41 @@ const EditItem = () => {
   };
 
   const handleCategorySelect = (cat) => {
-    setSelectedCategory(cat._id);
+    const nextId = cat?._id ?? cat?.id ?? cat?.categoryId;
+    setSelectedCategory(nextId == null ? "" : String(nextId));
     setSelectedSubcategory("");
     // Update form value
-    reset({ ...watch(), category: cat._id, subcategory: "" });
+    reset({ ...watch(), categoryId: nextId, subcategoryId: "" });
   };
   const handleSubcategorySelect = (sub) => {
-    setSelectedSubcategory(sub._id);
-    reset({ ...watch(), subcategory: sub._id });
+    const nextId = sub?._id ?? sub?.id ?? sub?.subcategoryId;
+    setSelectedSubcategory(nextId == null ? "" : String(nextId));
+    reset({ ...watch(), subcategoryId: nextId });
   };
 
   const onSubmit = async (data) => {
     setLoading(true);
     setSubmitError("");
-    const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-      formData.append(key, value);
-    });
-    imageFiles.forEach((file) => formData.append("images", file));
-
     try {
-      await api.put(`/items/${id}`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      if (!Array.isArray(imageFiles) || imageFiles.length === 0) {
+        setSubmitError("Please upload at least one image to save changes.");
+        return;
+      }
+
+      const productRequest = {
+        productId: Number(id),
+        name: name || data?.name || "",
+        description: data?.description || "",
+        brand: data?.brand || "",
+        condition: data?.condition || "",
+        categoryId: selectedCategory ? Number(selectedCategory) : undefined,
+        subcategoryId: selectedSubcategory ? Number(selectedSubcategory) : undefined,
+      };
+
+      await itemService.editProduct(productRequest, imageFiles);
       navigate(`/items/${id}`);
     } catch (error) {
-      setSubmitError(error.response?.data?.error || "Failed to update item.");
+      setSubmitError(error?.response?.data?.error || error?.message || "Failed to update item.");
     } finally {
       setLoading(false);
     }

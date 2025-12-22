@@ -12,6 +12,9 @@ const CategoryFilter = ({
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const getCategoryId = (cat) => cat?._id ?? cat?.id ?? cat?.categoryId;
+  const getSubcategoryId = (sub) => sub?._id ?? sub?.id ?? sub?.subcategoryId;
+
   useEffect(() => {
     categoryService.getCategories().then((res) => {
       let raw = res;
@@ -50,9 +53,9 @@ const CategoryFilter = ({
         <div className="flex flex-wrap gap-2">
           {prime.map((cat, index) => (
             <button
-              key={cat._id || cat.id || `${cat.name || 'prime-cat'}-${index}`}
+              key={getCategoryId(cat) || `${cat.name || 'prime-cat'}-${index}`}
               className={`px-4 py-2 rounded-full border ${
-                selectedCategory === cat._id
+                String(selectedCategory) === String(getCategoryId(cat))
                   ? "bg-gray-800 text-white"
                   : "bg-white text-gray-800 border-gray-800"
               } font-semibold`}
@@ -68,9 +71,9 @@ const CategoryFilter = ({
         <div className="flex flex-wrap gap-2">
           {regular.map((cat, index) => (
             <button
-              key={cat._id || cat.id || `${cat.name || 'cat'}-${index}`}
+              key={getCategoryId(cat) || `${cat.name || 'cat'}-${index}`}
               className={`px-4 py-2 rounded-full border ${
-                selectedCategory === cat._id
+                String(selectedCategory) === String(getCategoryId(cat))
                   ? "bg-gray-800 text-white"
                   : "bg-white text-gray-800 border-gray-800"
               } font-semibold`}
@@ -87,13 +90,13 @@ const CategoryFilter = ({
           <div className="flex flex-wrap gap-2">
             {(
               (Array.isArray(categories)
-                ? categories.find((cat) => cat._id === selectedCategory)
+                ? categories.find((cat) => String(getCategoryId(cat)) === String(selectedCategory))
                 : undefined)?.subcategories || []
             ).map((sub, index) => (
               <button
-                key={sub._id || sub.id || `${sub.name || 'sub'}-${index}`}
+                key={getSubcategoryId(sub) || `${sub.name || 'sub'}-${index}`}
                 className={`px-3 py-1 rounded-full border ${
-                  selectedSubcategory === sub._id
+                  String(selectedSubcategory) === String(getSubcategoryId(sub))
                     ? "bg-purple-600 text-white"
                     : "bg-white text-purple-600 border-purple-600"
                 } font-medium`}

@@ -1,5 +1,5 @@
 // src/pages/CategoryItems.js
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -58,6 +58,7 @@ const CategoryItems = () => {
   });
 
   const queryClient = useQueryClient();
+  const subcategoryCountCacheRef = useRef(new Map());
 
   // Debug: Log favorites whenever CategoryItems renders
   console.log("Current favorites:", favorites);
@@ -139,7 +140,32 @@ const CategoryItems = () => {
         : Array.isArray(subRes?.data)
           ? subRes.data
           : [];
-      setSubcategories(subs);
+
+      const withCounts = await Promise.all(
+        subs.map(async (subcat) => {
+          const name = subcat?.name == null ? "" : String(subcat.name).trim();
+          if (!name) {
+            return { ...subcat, itemCount: 0 };
+          }
+
+          const cached = subcategoryCountCacheRef.current.get(name);
+          if (typeof cached === "number") {
+            return { ...subcat, itemCount: cached };
+          }
+
+          try {
+            const data = await itemService.getItemsBySubcategoryName(name);
+            const count = Array.isArray(data?.items) ? data.items.length : 0;
+            subcategoryCountCacheRef.current.set(name, count);
+            return { ...subcat, itemCount: count };
+          } catch {
+            subcategoryCountCacheRef.current.set(name, 0);
+            return { ...subcat, itemCount: 0 };
+          }
+        })
+      );
+
+      setSubcategories(withCounts);
     } catch (err) {
       console.error("Error fetching subcategories:", err);
       setSubcategories([]);

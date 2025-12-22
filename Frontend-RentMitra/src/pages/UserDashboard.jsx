@@ -67,9 +67,9 @@ const UserDashboard = () => {
   }
 
   const stats = [
-    { title: "Active Listings", value: dashboardData?.stats?.activeListings || 0, icon: <ShoppingBagIcon className="text-white"/>, color: "bg-gray-500", link: "/my-listings" },
+    { title: "Active Rentals", value: dashboardData?.stats?.activeListings || 0, icon: <ShoppingBagIcon className="text-white"/>, color: "bg-gray-500", link: "/my-listings" },
     { title: "Pending Requests", value: dashboardData?.stats?.pendingRequests || 0, icon: <NotificationsIcon className="text-white"/>, color: "bg-yellow-500", link: "/my-rentals" },
-    { title: "Active Rentals", value: ownedProductsCount, icon: <PeopleIcon className="text-white"/>, color: "bg-green-500", link: "/my-rentals" },
+    { title: "Active Listings", value: ownedProductsCount, icon: <PeopleIcon className="text-white"/>, color: "bg-green-500", link: "/my-rentals" },
     { title: "Recent Earnings", value: `₹${dashboardData?.stats?.recentEarnings || 0}`, icon: <MoneyIcon className="text-white"/>, color: "bg-purple-500", link: "/earnings" },
   ];
 
@@ -108,8 +108,8 @@ const UserDashboard = () => {
             <h2 className="mb-4 text-xl font-bold text-gray-800">Quick Actions</h2>
             <div className="space-y-3">
               <button onClick={() => navigate("/add-item")} className="w-full p-3 text-left text-white transition bg-gray-500 rounded-lg hover:bg-gray-600">List New Item</button>
-              <button onClick={() => navigate("/my-listings")} className="w-full p-3 text-left text-gray-800 transition bg-gray-200 rounded-lg hover:bg-gray-300">Manage Listings</button>
-              <button onClick={() => navigate("/my-rentals")} className="w-full p-3 text-left text-gray-800 transition bg-gray-200 rounded-lg hover:bg-gray-300">View Rentals</button>
+              <button onClick={() => navigate("/my-listings")} className="w-full p-3 text-left text-gray-800 transition bg-gray-200 rounded-lg hover:bg-gray-300">View Rentals</button>
+              <button onClick={() => navigate("/my-rentals")} className="w-full p-3 text-left text-gray-800 transition bg-gray-200 rounded-lg hover:bg-gray-300">Manage Listings</button>
               <button onClick={() => navigate("/profile")} className="w-full p-3 text-left text-gray-800 transition bg-gray-200 rounded-lg hover:bg-gray-300">Edit Profile</button>
             </div>
           </div>

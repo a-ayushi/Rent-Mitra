@@ -25,7 +25,6 @@ api.interceptors.request.use(
       url.startsWith('/api/products/getAllProducts') ||
       url.startsWith('/api/products/get-products-by-category') ||
       url.startsWith('/api/products/productsbysubcategory') ||
-      url.startsWith('/api/products/get-by-id') ||
       url.startsWith('/api/products/products/') ||
       url.startsWith('/api/products/addproduct') ||
       url.startsWith('/api/products/categories') ||

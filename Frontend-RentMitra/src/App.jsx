@@ -37,7 +37,6 @@ import UserDashboard from "./pages/UserDashboard";
 import Profile from "./pages/Profile";
 import MyListings from "./pages/MyListings";
 import AddItem from "./pages/AddItem";
-import EditItem from "./pages/EditItem";
 import MyRentals from "./pages/MyRentals";
 import Favorites from "./pages/Favorites";
 import Messages from "./pages/Messages";
@@ -165,7 +164,7 @@ const AppContent = () => {
                           path="/edit-item/:id"
                           element={
                             <PrivateRoute>
-                              <EditItem />
+                              <AddItem />
                             </PrivateRoute>
                           }
                         />

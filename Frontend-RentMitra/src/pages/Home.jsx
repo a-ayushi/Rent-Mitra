@@ -24,11 +24,95 @@ const BeautifulRentalHome = () => {
   const [featuredItems, setFeaturedItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
-    renters: "0",
-    items: "0",
-    rating: "0",
-    verified: "0",
+    renters: 0,
+    items: 0,
+    rating: 0,
+    verified: 0,
   });
+
+  const statsBarRef = useRef(null);
+  const [statsVisible, setStatsVisible] = useState(false);
+
+  const prefersReducedMotion =
+    typeof window !== "undefined"
+      ? (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false)
+      : false;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (prefersReducedMotion) {
+      setStatsVisible(true);
+      return;
+    }
+
+    const el = statsBarRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting) {
+          setStatsVisible(true);
+          observer.disconnect();
+        }
+      },
+      {
+        threshold: 0.01,
+        // Start as soon as it enters viewport (a tiny bit early so user sees counting immediately)
+        rootMargin: '0px 0px -10% 0px',
+      }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [prefersReducedMotion]);
+
+  const useCountUp = (target, { durationMs = 900, decimals = 0 } = {}) => {
+    const [value, setValue] = useState(0);
+
+    useEffect(() => {
+      if (!statsVisible) return;
+      if (prefersReducedMotion) {
+        setValue(Number(target) || 0);
+        return;
+      }
+
+      const end = Number(target) || 0;
+      const start = 0;
+      const startAt = performance.now();
+
+      const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+      let raf = 0;
+      const tick = (now) => {
+        const t = Math.min(1, (now - startAt) / durationMs);
+        const eased = easeOutCubic(t);
+        const next = start + (end - start) * eased;
+        const pow = Math.pow(10, decimals);
+        setValue(Math.round(next * pow) / pow);
+        if (t < 1) raf = requestAnimationFrame(tick);
+      };
+
+      raf = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(raf);
+    }, [target, durationMs, decimals, statsVisible, prefersReducedMotion]);
+
+    return value;
+  };
+
+  const formatCompact = (n) => {
+    const num = Number(n) || 0;
+    if (num >= 1000000) {
+      const v = Math.round((num / 1000000) * 10) / 10;
+      return `${v}M+`;
+    }
+    if (num >= 1000) {
+      const v = Math.round((num / 1000) * 10) / 10;
+      const out = String(v).endsWith(".0") ? String(Math.round(v)) : String(v);
+      return `${out}K+`;
+    }
+    return num.toLocaleString();
+  };
 
   const iconMap = {
     "Electronics": "💻",
@@ -112,9 +196,11 @@ const BeautifulRentalHome = () => {
 
         el.style.transformStyle = "preserve-3d";
         el.style.willChange = "transform, opacity, filter";
+        el.style.backfaceVisibility = "hidden";
+        el.style.webkitBackfaceVisibility = "hidden";
         el.style.transform = `translate3d(0px, ${y}px, ${z}px) rotateX(${rotateX}deg)`;
         el.style.opacity = String(opacity);
-        el.style.filter = `blur(${blurPx}px)`;
+        el.style.filter = blurPx > 0.12 ? `blur(${blurPx}px)` : "none";
 
         if (below > 0.9) {
           el.style.pointerEvents = "none";
@@ -124,17 +210,24 @@ const BeautifulRentalHome = () => {
       });
     };
 
-    const tick = () => {
-      update();
-      rafRef.current = window.requestAnimationFrame(tick);
+    let scheduled = false;
+    const scheduleUpdate = () => {
+      if (scheduled) return;
+      scheduled = true;
+      rafRef.current = window.requestAnimationFrame(() => {
+        scheduled = false;
+        update();
+      });
     };
 
     update();
-    rafRef.current = window.requestAnimationFrame(tick);
 
-    const onResize = () => update();
+    const onResize = () => scheduleUpdate();
+    const onScroll = () => scheduleUpdate();
     window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
+      window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
       if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
     };
@@ -167,10 +260,10 @@ const BeautifulRentalHome = () => {
       // You can fetch real stats from API if available
       // For now using placeholder logic
       setStats({
-        renters: "50K+",
-        items: mappedCategories.reduce((sum, cat) => sum + cat.itemCount, 0).toString() || "10K+",
-        rating: "4.8★",
-        verified: "98%",
+        renters: 50000,
+        items: mappedCategories.reduce((sum, cat) => sum + cat.itemCount, 0) || 0,
+        rating: 4.8,
+        verified: 98,
       });
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -259,7 +352,7 @@ const BeautifulRentalHome = () => {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 mb-6 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
               <TrendingUp className="w-4 h-4 text-green-400" />
-              <span className="text-sm font-medium">Join {stats.renters} happy renters</span>
+              <span className="text-sm font-medium">Join {formatCompact(stats.renters)} happy renters</span>
             </div>
             
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
@@ -298,34 +391,34 @@ const BeautifulRentalHome = () => {
         </div>
 
         {/* Stats Bar */}
-        <div className="border-t border-white/10 bg-black/20 backdrop-blur-sm">
+        <div ref={statsBarRef} className="border-t border-white/10 bg-black/20 backdrop-blur-sm">
           <div className="container mx-auto px-4 py-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="flex items-center gap-3 justify-center">
                 <div className="text-blue-400"><TrendingUp /></div>
                 <div>
-                  <div className="text-2xl font-bold">{stats.renters}</div>
+                  <div className="text-2xl font-bold">{formatCompact(useCountUp(stats.renters, { durationMs: 1100 }))}</div>
                   <div className="text-sm text-gray-400">Active Renters</div>
                 </div>
               </div>
               <div className="flex items-center gap-3 justify-center">
                 <div className="text-blue-400"><Category /></div>
                 <div>
-                  <div className="text-2xl font-bold">{stats.items}</div>
+                  <div className="text-2xl font-bold">{useCountUp(stats.items, { durationMs: 900 }).toLocaleString()}</div>
                   <div className="text-sm text-gray-400">Items Listed</div>
                 </div>
               </div>
               <div className="flex items-center gap-3 justify-center">
                 <div className="text-blue-400"><Star /></div>
                 <div>
-                  <div className="text-2xl font-bold">{stats.rating}</div>
+                  <div className="text-2xl font-bold">{useCountUp(stats.rating, { durationMs: 900, decimals: 1 }).toFixed(1)}★</div>
                   <div className="text-sm text-gray-400">Average Rating</div>
                 </div>
               </div>
               <div className="flex items-center gap-3 justify-center">
                 <div className="text-blue-400"><Verified /></div>
                 <div>
-                  <div className="text-2xl font-bold">{stats.verified}</div>
+                  <div className="text-2xl font-bold">{Math.round(useCountUp(stats.verified, { durationMs: 900 }))}%</div>
                   <div className="text-sm text-gray-400">Verified Owners</div>
                 </div>
               </div>
@@ -516,32 +609,6 @@ const BeautifulRentalHome = () => {
                 )}
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section ref={setSectionRef(5)} className="py-16 bg-gradient-to-r from-blue-600 to-purple-600">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
-            Have Items to Rent Out?
-          </h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Turn your unused items into income. List for free and start earning today.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
-              onClick={() => navigate('/register')}
-              className="px-8 py-4 bg-white text-gray-900 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all transform hover:scale-105 shadow-xl"
-            >
-              List Your Items
-            </button>
-            <button 
-              onClick={() => navigate('/about')}
-              className="px-8 py-4 bg-transparent border-2 border-white text-white rounded-xl font-bold text-lg hover:bg-white/10 transition-all"
-            >
-              Learn More
-            </button>
           </div>
         </div>
       </section>
