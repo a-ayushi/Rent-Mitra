@@ -29,7 +29,10 @@ const Settings = () => {
   const [prefError, setPrefError] = useState("");
 
   React.useEffect(() => {
-    categoryService.getCities().then((res) => setCities(res.data));
+    categoryService.getCities().then((res) => {
+      const next = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+      setCities(next);
+    });
   }, []);
 
   const SideNavItem = ({ tabName, label, icon }) => (
@@ -154,7 +157,7 @@ const Settings = () => {
             className="block w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500"
           >
             <option value="">Select City</option>
-            {cities.map((c) => (
+            {(Array.isArray(cities) ? cities : []).map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>

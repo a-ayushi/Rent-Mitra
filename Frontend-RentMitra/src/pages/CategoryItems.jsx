@@ -14,7 +14,6 @@ import {
   XLg,
   ChevronDown,
   ChevronUp,
-  Search,
   Grid3x3GapFill,
   ListUl,
   CheckCircleFill,
@@ -24,17 +23,15 @@ import {
   Clock,
   Award,
 } from "react-bootstrap-icons";
-import api from "../services/api";
 import userService from "../services/userService";
 import itemService from "../services/itemService";
 import categoryService from "../services/categoryService";
 
 import { useQueryClient } from 'react-query';
-import { useCity } from '../hooks/useCity';
 
 const CategoryItems = () => {
-  const { city } = useCity();
   const { id } = useParams();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [category, setCategory] = useState(null);
@@ -42,8 +39,6 @@ const CategoryItems = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
   const [showFilters, setShowFilters] = useState(false);
@@ -54,16 +49,16 @@ const CategoryItems = () => {
     minPrice: "",
     maxPrice: "",
     condition: [],
-    searchQuery: "",
   });
 
   const queryClient = useQueryClient();
   const subcategoryCountCacheRef = useRef(new Map());
 
-  // Debug: Log favorites whenever CategoryItems renders
-  console.log("Current favorites:", favorites);
+  const limit = 12;
 
-  // Fetch favorites from backend on mount
+  const selectedType = searchParams.get("type") || "category";
+  const selectedSubcategoryName = searchParams.get("name") || "";
+
   useEffect(() => {
     async function fetchFavorites() {
       try {
@@ -82,13 +77,8 @@ const CategoryItems = () => {
     }
     fetchFavorites();
   }, []);
-  const limit = 12;
-  const navigate = useNavigate();
 
-  const selectedType = searchParams.get("type") || "category";
-  const selectedSubcategoryName = searchParams.get("name") || "";
-
-  const fetchCategoryItems = useCallback(async () => { // eslint-disable-line
+  const fetchCategoryItems = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -100,13 +90,9 @@ const CategoryItems = () => {
 
       if (data && Array.isArray(data.items)) {
         setItems(data.items);
-        setTotalPages(1);
-        setTotalItems(data.items.length);
       } else {
         console.error("Malformed response from getItemsByCategory:", data);
         setItems([]);
-        setTotalPages(1);
-        setTotalItems(0);
       }
     } catch (err) {
       console.error("Error fetching category items:", err);
@@ -114,11 +100,10 @@ const CategoryItems = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, page, sortBy, sortOrder, filters, city, selectedType, selectedSubcategoryName]);
+  }, [id, selectedType, selectedSubcategoryName]);
 
   const fetchSubcategories = useCallback(async () => {
     try {
-      // Resolve category name from categoryId, then fetch subcategories by name
       const categories = await categoryService.getCategories();
       const arr = Array.isArray(categories)
         ? categories
@@ -174,28 +159,26 @@ const CategoryItems = () => {
 
   useEffect(() => {
     if (id) {
+      setPage(1);
       fetchCategoryItems();
       fetchSubcategories();
     }
-  }, [id, page, sortBy, sortOrder, filters, city, fetchCategoryItems, fetchSubcategories]);
+  }, [id, selectedType, selectedSubcategoryName, fetchCategoryItems, fetchSubcategories]);
 
   const toggleFavorite = async (itemId) => {
     try {
       const isCurrentlyFavorited = favorites.includes(itemId);
       await itemService.toggleFavorite(itemId, isCurrentlyFavorited);
-      // Optimistically update state
       setFavorites(prev =>
         prev.includes(itemId)
           ? prev.filter(id => id !== itemId)
           : [...prev, itemId]
       );
-      // Invalidate favorites query for cross-page sync
       queryClient.invalidateQueries('favorites');
     } catch (err) {
       console.error('Failed to toggle favorite:', err);
     }
   };
-
 
   const handleSort = (field, order) => {
     setSortBy(field);
@@ -223,21 +206,91 @@ const CategoryItems = () => {
       minPrice: "",
       maxPrice: "",
       condition: [],
-      searchQuery: "",
     });
   };
 
-  const handleSearch = (e) => {
+  const handleApplyFilters = (e) => {
     e.preventDefault();
     setPage(1);
-    fetchCategoryItems();
   };
 
-  const activeFiltersCount = 
+  const getItemPricePerDay = (item) => {
+    const direct = item?.pricePerDay;
+    if (typeof direct === "number" && Number.isFinite(direct)) return direct;
+    const rp = item?.rentPrices;
+    if (rp && typeof rp === "object") {
+      const values = Object.values(rp)
+        .map((v) => (typeof v === "number" ? v : Number(v)))
+        .filter((v) => Number.isFinite(v));
+      if (values.length > 0) return Math.min(...values);
+    }
+    return null;
+  };
+
+  const minPrice = filters.minPrice === "" || filters.minPrice == null ? null : Number(filters.minPrice);
+  const maxPrice = filters.maxPrice === "" || filters.maxPrice == null ? null : Number(filters.maxPrice);
+  const selectedConditions = Array.isArray(filters.condition)
+    ? filters.condition.map((c) => String(c).trim().toLowerCase()).filter(Boolean)
+    : [];
+
+  const filteredItems = (Array.isArray(items) ? items : []).filter((it) => {
+    const price = getItemPricePerDay(it);
+    if (minPrice != null && Number.isFinite(minPrice)) {
+      if (price == null || price < minPrice) return false;
+    }
+    if (maxPrice != null && Number.isFinite(maxPrice)) {
+      if (price == null || price > maxPrice) return false;
+    }
+
+    if (selectedConditions.length > 0) {
+      const itCondRaw = it?.condition ?? it?.dynamicAttributes?.condition;
+      const itCond = itCondRaw == null ? "" : String(itCondRaw).trim().toLowerCase();
+      if (!itCond || !selectedConditions.includes(itCond)) return false;
+    }
+
+    return true;
+  });
+
+  const sortedItems = filteredItems.slice().sort((a, b) => {
+    if (sortBy === "pricePerDay") {
+      const ap = getItemPricePerDay(a);
+      const bp = getItemPricePerDay(b);
+      const aVal = ap == null ? Number.POSITIVE_INFINITY : ap;
+      const bVal = bp == null ? Number.POSITIVE_INFINITY : bp;
+      return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+    }
+
+    const aTime = new Date(a?.createdAt ?? a?.createdOn ?? a?.createdDate ?? 0).getTime() || 0;
+    const bTime = new Date(b?.createdAt ?? b?.createdOn ?? b?.createdDate ?? 0).getTime() || 0;
+    return sortOrder === "asc" ? aTime - bTime : bTime - aTime;
+  });
+
+  const computedTotalItems = sortedItems.length;
+  const computedTotalPages = Math.max(1, Math.ceil(computedTotalItems / limit));
+
+  useEffect(() => {
+    if (page > computedTotalPages) {
+      setPage(computedTotalPages);
+    }
+  }, [page, computedTotalPages]);
+
+  const clampedPage = Math.min(page, computedTotalPages);
+  const startIndex = (clampedPage - 1) * limit;
+  const pagedItems = sortedItems.slice(startIndex, startIndex + limit);
+
+  const activeFiltersCount =
     filters.condition.length +
     (filters.minPrice ? 1 : 0) +
-    (filters.maxPrice ? 1 : 0) +
-    (filters.searchQuery ? 1 : 0);
+    (filters.maxPrice ? 1 : 0);
+
+  const hasPriceFilter = Boolean(filters.minPrice) || Boolean(filters.maxPrice);
+  const priceChipLabel = hasPriceFilter
+    ? (filters.minPrice && filters.maxPrice
+        ? `₹${filters.minPrice} - ₹${filters.maxPrice}/day`
+        : filters.minPrice
+          ? `From ₹${filters.minPrice}/day`
+          : `Up to ₹${filters.maxPrice}/day`)
+    : "";
 
   if (loading && items.length === 0) {
     return (
@@ -309,7 +362,7 @@ const CategoryItems = () => {
               <div className="flex items-center gap-4 mt-4">
                 <span className="px-4 py-2 text-sm font-medium rounded-full bg-white/20 backdrop-blur-sm">
                   <Tags className="inline mr-2" size={16} />
-                  {totalItems} items available
+                  {computedTotalItems} items available
                 </span>
                 <span className="px-4 py-2 text-sm font-medium rounded-full bg-white/20 backdrop-blur-sm">
                   <StarFill className="inline mr-2" size={16} />
@@ -355,22 +408,65 @@ const CategoryItems = () => {
 
         {/* Controls Bar */}
         <div className="flex flex-wrap items-center justify-between gap-4 p-5 mb-8 bg-white shadow-sm rounded-xl">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all ${
-              showFilters 
-                ? "bg-gray-800 text-white shadow-lg"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            <Filter size={18} />
-            Filters
-            {activeFiltersCount > 0 && (
-              <span className="bg-white text-gray-600 px-2.5 py-0.5 rounded-full text-xs font-bold shadow-sm">
-                {activeFiltersCount}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all ${
+                showFilters
+                  ? "bg-gray-800 text-white shadow-lg"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              <Filter size={18} />
+              Filters
+              {activeFiltersCount > 0 && (
+                <span className="bg-white text-gray-600 px-2.5 py-0.5 rounded-full text-xs font-bold shadow-sm">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
+
+            {hasPriceFilter && (
+              <span className="inline-flex items-center gap-2 px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded-full">
+                {priceChipLabel}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilters((prev) => ({ ...prev, minPrice: "", maxPrice: "" }));
+                    setPage(1);
+                  }}
+                  className="p-0.5 rounded hover:bg-gray-200 text-gray-500"
+                >
+                  <XLg size={12} />
+                </button>
               </span>
             )}
-          </button>
+
+            {(Array.isArray(filters.condition) ? filters.condition : []).map((cond) => {
+              const label = cond ? String(cond).charAt(0).toUpperCase() + String(cond).slice(1) : "";
+              return (
+                <span
+                  key={cond}
+                  className="inline-flex items-center gap-2 px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded-full"
+                >
+                  {label}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilters((prev) => ({
+                        ...prev,
+                        condition: (Array.isArray(prev.condition) ? prev.condition : []).filter((c) => c !== cond),
+                      }));
+                      setPage(1);
+                    }}
+                    className="p-0.5 rounded hover:bg-gray-200 text-gray-500"
+                  >
+                    <XLg size={12} />
+                  </button>
+                </span>
+              );
+            })}
+          </div>
 
           <div className="flex items-center gap-4">
             {/* View Mode Toggle */}
@@ -469,28 +565,7 @@ const CategoryItems = () => {
                 </button>
               </div>
 
-              <form onSubmit={handleSearch}>
-                {/* Search */}
-                <div className="mb-6">
-                  <label className="block mb-3 text-sm font-semibold text-gray-700">
-                    Search in {category?.name}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="searchQuery"
-                      value={filters.searchQuery}
-                      onChange={handleFilterChange}
-                      placeholder="Search items..."
-                      className="w-full py-3 pl-10 pr-4 transition-all border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent bg-gray-50 focus:bg-white"
-                    />
-                    <Search
-                      className="absolute text-gray-400 transform -translate-y-1/2 left-3 top-1/2"
-                      size={18}
-                    />
-                  </div>
-                </div>
-
+              <form onSubmit={handleApplyFilters}>
                 {/* Price Range */}
                 <div className="mb-6">
                   <label className="flex items-center block gap-2 mb-3 text-sm font-semibold text-gray-700">
@@ -551,7 +626,15 @@ const CategoryItems = () => {
                         <span className="flex-1 ml-3 font-medium text-gray-700">
                           {cond.label}
                         </span>
-                        <span className={`w-3 h-3 rounded-full bg-${cond.color}-500`}></span>
+                        <span
+                          className={`w-3 h-3 rounded-full ${
+                            cond.color === "green"
+                              ? "bg-green-500"
+                              : cond.color === "yellow"
+                                ? "bg-yellow-500"
+                                : "bg-gray-500"
+                          }`}
+                        ></span>
                       </label>
                     ))}
                   </div>
@@ -579,14 +662,14 @@ const CategoryItems = () => {
 
           {/* Items Grid/List */}
           <div className="flex-1">
-            {items.length === 0 ? (
+            {pagedItems.length === 0 ? (
               <div className="py-20 text-center bg-white shadow-sm rounded-xl">
                 <div className="mb-6 text-7xl">🔍</div>
                 <h3 className="mb-3 text-2xl font-bold text-gray-800">
                   No items found
                 </h3>
                 <p className="max-w-md mx-auto mb-6 text-gray-600">
-                  Try adjusting your filters or search criteria to find what you're looking for
+                  Try adjusting your filters to find what you're looking for
                 </p>
                 <button
                   onClick={clearFilters}
@@ -604,7 +687,7 @@ const CategoryItems = () => {
                       : "space-y-4"
                   }
                 >
-                  {items.map((item) =>
+                  {pagedItems.map((item) =>
                     viewMode === "grid" ? (
                       <ItemCard
                         key={item._id}
@@ -624,7 +707,7 @@ const CategoryItems = () => {
                 </div>
 
                 {/* Pagination */}
-                {totalPages > 1 && (
+                {computedTotalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 mt-12">
                     <button
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -635,14 +718,14 @@ const CategoryItems = () => {
                     </button>
 
                     <div className="flex gap-2">
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      {Array.from({ length: Math.min(5, computedTotalPages) }, (_, i) => {
                         let pageNum;
-                        if (totalPages <= 5) {
+                        if (computedTotalPages <= 5) {
                           pageNum = i + 1;
                         } else if (page <= 3) {
                           pageNum = i + 1;
-                        } else if (page >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i;
+                        } else if (page >= computedTotalPages - 2) {
+                          pageNum = computedTotalPages - 4 + i;
                         } else {
                           pageNum = page - 2 + i;
                         }
@@ -663,8 +746,8 @@ const CategoryItems = () => {
                     </div>
 
                     <button
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={page === totalPages}
+                      onClick={() => setPage((p) => Math.min(computedTotalPages, p + 1))}
+                      disabled={page === computedTotalPages}
                       className="p-2.5 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
                       <ArrowRight size={18} />
