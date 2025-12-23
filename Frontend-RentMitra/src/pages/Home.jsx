@@ -427,6 +427,7 @@ const BeautifulRentalHome = () => {
         </div>
       </section>
 
+
       {/* Categories Section */}
       <section ref={setSectionRef(1)} className="py-12 bg-gray-50">
         <div className="container mx-auto px-4">
