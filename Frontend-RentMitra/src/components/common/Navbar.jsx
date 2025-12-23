@@ -9,6 +9,7 @@ import {
   Favorite,
   FavoriteBorder,
   Search,
+  LocationOnOutlined,
   ExpandMore,
   Language,
   Person,
@@ -217,7 +218,7 @@ const Navbar = () => {
               onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 min-w-[120px] transition-colors"
             >
-              <Search className="w-4 h-4" />
+              <LocationOnOutlined className="w-4 h-4" />
               <span className="truncate max-w-[80px]">{city || "Punjab"}</span>
               <ExpandMore className={`w-4 h-4 transition-transform ${locationDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -311,9 +312,9 @@ const Navbar = () => {
             />
             <button
               type="submit"
-              className="flex items-center justify-center px-4 py-2 text-white transition-colors bg-gray-900 lg:px-6 rounded-r-md hover:bg-gray-800"
+              className="flex items-center justify-center px-2.5 py-2 text-gray-600 transition-colors bg-transparent border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-50 hover:text-gray-900 lg:px-3"
             >
-              <Search className="w-5 h-5" />
+              <Search className="w-3.5 h-3.5" />
             </button>
           </form>
 
@@ -487,7 +488,7 @@ const Navbar = () => {
                   className="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-700 transition-colors border border-gray-300 rounded-md hover:bg-gray-50"
                 >
                   <div className="flex items-center gap-2">
-                    <Search className="w-4 h-4" />
+                    <LocationOnOutlined className="w-4 h-4" />
                     <span>{city || "Select Location"}</span>
                   </div>
                   <ExpandMore className={`w-4 h-4 transition-transform ${locationDropdownOpen ? 'rotate-180' : ''}`} />

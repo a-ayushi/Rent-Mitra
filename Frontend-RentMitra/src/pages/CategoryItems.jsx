@@ -15,7 +15,6 @@ import {
   ChevronDown,
   ChevronUp,
   Grid3x3GapFill,
-  ListUl,
   CheckCircleFill,
   Tags,
   CashStack,
@@ -42,7 +41,6 @@ const CategoryItems = () => {
   const [sortOrder, setSortOrder] = useState("desc");
   const [showFilters, setShowFilters] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
-  const [viewMode, setViewMode] = useState("grid");
   const [favorites, setFavorites] = useState([]);
   const [filters, setFilters] = useState({
     minPrice: "",
@@ -320,35 +318,35 @@ const CategoryItems = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="relative overflow-hidden text-white bg-gradient-to-br from-gray-600 via-indigo-600 to-purple-600">
+      <div className="relative overflow-hidden text-white bg-gradient-to-br from-black via-gray-900 to-gray-800">
         <div className="absolute inset-0 bg-black opacity-10"></div>
-        <div className="container relative z-10 px-4 py-12 mx-auto">
+        <div className="container relative z-10 px-4 py-8 mx-auto">
           <button
             onClick={() => navigate("/categories")}
-            className="flex items-center mb-6 transition-all text-white/80 hover:text-white group"
+            className="flex items-center mb-4 transition-all text-white/80 hover:text-white group"
           >
             <ArrowLeft className="mr-2 transition-transform group-hover:-translate-x-1" size={20} />
             Back to Categories
           </button>
-          <div className="flex items-center gap-6">
-            <div className="p-4 text-6xl bg-white/20 backdrop-blur-sm rounded-2xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 text-5xl bg-white/20 backdrop-blur-sm rounded-2xl">
               {category?.icon || "📦"}
             </div>
             <div>
-              <h1 className="mb-3 text-4xl font-bold md:text-5xl">
+              <h1 className="mb-2 text-3xl font-bold md:text-4xl">
                 {category?.name}
               </h1>
               {category?.description && (
-                <p className="max-w-2xl text-lg text-white/90">
+                <p className="max-w-2xl text-base text-white/90">
                   {category.description}
                 </p>
               )}
-              <div className="flex items-center gap-4 mt-4">
-                <span className="px-4 py-2 text-sm font-medium rounded-full bg-white/20 backdrop-blur-sm">
+              <div className="flex items-center gap-3 mt-3">
+                <span className="px-3 py-1.5 text-xs font-medium rounded-full bg-white/20 backdrop-blur-sm">
                   <Tags className="inline mr-2" size={16} />
                   {computedTotalItems} items available
                 </span>
-                <span className="px-4 py-2 text-sm font-medium rounded-full bg-white/20 backdrop-blur-sm">
+                <span className="px-3 py-1.5 text-xs font-medium rounded-full bg-white/20 backdrop-blur-sm">
                   <StarFill className="inline mr-2" size={16} />
                   4.5 avg rating
                 </span>
@@ -358,15 +356,11 @@ const CategoryItems = () => {
         </div>
       </div>
 
-      <div className="container px-4 py-8 mx-auto">
+      <div className="container px-4 pt-4 pb-8 mx-auto">
         {/* Subcategories */}
         {subcategories.length > 0 && (
-          <div className="mb-10">
-            <h3 className="flex items-center mb-6 text-2xl font-bold text-gray-800">
-              <Grid3x3GapFill className="mr-3 text-gray-600" size={24} />
-              Explore Subcategories
-            </h3>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
+          <div className="mb-4">
+            <div className="grid grid-cols-2 gap-1 md:grid-cols-4 lg:grid-cols-6">
               {subcategories.map((subcat) => (
                 <div
                   key={subcat.subcategoryId || subcat._id || subcat.id}
@@ -375,13 +369,13 @@ const CategoryItems = () => {
                     const encoded = encodeURIComponent(name);
                     navigate(`/category/${id}?type=subcategory&name=${encoded}`);
                   }}
-                  className="p-5 text-center transition-all bg-white border border-gray-100 cursor-pointer rounded-xl hover:shadow-lg hover:-translate-y-1 group"
+                  className="w-full p-3 text-center transition-all bg-white border border-gray-100 cursor-pointer rounded-xl hover:shadow-lg hover:-translate-y-1 group"
                 >
-                  <div className="mb-3 text-4xl transition-transform group-hover:scale-110">
+                  <div className="mb-1.5 text-3xl transition-transform group-hover:scale-110">
                     {subcat.icon || "📁"}
                   </div>
-                  <h6 className="mb-1 font-semibold text-gray-800">{subcat.name}</h6>
-                  <span className="text-sm text-gray-500">
+                  <h6 className="mb-0.5 text-sm font-semibold text-gray-800">{subcat.name}</h6>
+                  <span className="text-xs text-gray-500">
                     {subcat.itemCount || 0} items
                   </span>
                 </div>
@@ -391,20 +385,71 @@ const CategoryItems = () => {
         )}
 
         {/* Controls Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 p-5 mb-8 bg-white shadow-sm rounded-xl">
-          <div className="flex flex-wrap items-center gap-3">
+        <>
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            {/* Sort Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSortDropdown(!showSortDropdown)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all font-medium text-gray-700"
+              >
+                <span className="text-sm">Sort by:</span>
+                <span className="font-semibold text-gray-600">
+                  {sortBy === "pricePerDay" ? "Price" : "Newest"}
+                </span>
+                {showSortDropdown ? (
+                  <ChevronUp size={18} className="text-gray-400" />
+                ) : (
+                  <ChevronDown size={18} className="text-gray-400" />
+                )}
+              </button>
+              {showSortDropdown && (
+                <div className="absolute left-0 z-10 w-56 mt-2 overflow-hidden bg-white border border-gray-100 shadow-xl rounded-xl">
+                  <button
+                    onClick={() => handleSort("createdAt", "desc")}
+                    className={`w-full text-left px-5 py-3 hover:bg-gray-50 flex items-center gap-3 transition-all ${
+                      sortBy === "createdAt" ? "bg-gray-50 text-gray-600" : ""
+                    }`}
+                  >
+                    <Clock size={18} />
+                    Newest First
+                  </button>
+                  <button
+                    onClick={() => handleSort("pricePerDay", "asc")}
+                    className={`w-full text-left px-5 py-3 hover:bg-gray-50 flex items-center gap-3 transition-all ${
+                      sortBy === "pricePerDay" && sortOrder === "asc"
+                        ? "bg-gray-50 text-gray-600"
+                        : ""
+                    }`}
+                  >
+                    <CashStack size={18} />
+                    Price: Low to High
+                  </button>
+                  <button
+                    onClick={() => handleSort("pricePerDay", "desc")}
+                    className={`w-full text-left px-5 py-3 hover:bg-gray-50 flex items-center gap-3 transition-all ${
+                      sortBy === "pricePerDay" && sortOrder === "desc"
+                        ? "bg-gray-50 text-gray-600"
+                        : ""
+                    }`}
+                  >
+                    <CashStack size={18} />
+                    Price: High to Low
+                  </button>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all ${
-                showFilters
-                  ? "bg-gray-800 text-white shadow-lg"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              className={`flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all font-medium text-gray-700 ${
+                showFilters ? "ring-2 ring-gray-900" : ""
               }`}
             >
               <Filter size={18} />
               Filters
               {activeFiltersCount > 0 && (
-                <span className="bg-white text-gray-600 px-2.5 py-0.5 rounded-full text-xs font-bold shadow-sm">
+                <span className="inline-flex items-center justify-center w-5 h-5 bg-gray-900 text-white rounded-full text-xs font-bold leading-none">
                   {activeFiltersCount}
                 </span>
               )}
@@ -449,86 +494,7 @@ const CategoryItems = () => {
               );
             })}
           </div>
-
-          <div className="flex items-center gap-4">
-            {/* View Mode Toggle */}
-            <div className="flex p-1 bg-gray-100 rounded-lg">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`p-2.5 rounded-md transition-all ${
-                  viewMode === "grid"
-                    ? "bg-white shadow-sm text-gray-600"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                <Grid3x3GapFill size={20} />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-2.5 rounded-md transition-all ${
-                  viewMode === "list"
-                    ? "bg-white shadow-sm text-gray-600"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                <ListUl size={20} />
-              </button>
-            </div>
-
-            {/* Sort Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowSortDropdown(!showSortDropdown)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all font-medium text-gray-700"
-              >
-                <span className="text-sm">Sort by:</span>
-                <span className="font-semibold text-gray-600">
-                  {sortBy === "pricePerDay" ? "Price" : "Newest"}
-                </span>
-                {showSortDropdown ? (
-                  <ChevronUp size={18} className="text-gray-400" />
-                ) : (
-                  <ChevronDown size={18} className="text-gray-400" />
-                )}
-              </button>
-              {showSortDropdown && (
-                <div className="absolute right-0 z-10 w-56 mt-2 overflow-hidden bg-white border border-gray-100 shadow-xl rounded-xl">
-                  <button
-                    onClick={() => handleSort("createdAt", "desc")}
-                    className={`w-full text-left px-5 py-3 hover:bg-gray-50 flex items-center gap-3 transition-all ${
-                      sortBy === "createdAt" ? "bg-gray-50 text-gray-600" : ""
-                    }`}
-                  >
-                    <Clock size={18} />
-                    Newest First
-                  </button>
-                  <button
-                    onClick={() => handleSort("pricePerDay", "asc")}
-                    className={`w-full text-left px-5 py-3 hover:bg-gray-50 flex items-center gap-3 transition-all ${
-                      sortBy === "pricePerDay" && sortOrder === "asc"
-                        ? "bg-gray-50 text-gray-600"
-                        : ""
-                    }`}
-                  >
-                    <CashStack size={18} />
-                    Price: Low to High
-                  </button>
-                  <button
-                    onClick={() => handleSort("pricePerDay", "desc")}
-                    className={`w-full text-left px-5 py-3 hover:bg-gray-50 flex items-center gap-3 transition-all ${
-                      sortBy === "pricePerDay" && sortOrder === "desc"
-                        ? "bg-gray-50 text-gray-600"
-                        : ""
-                    }`}
-                  >
-                    <CashStack size={18} />
-                    Price: High to Low
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        </>
 
         <div className="flex gap-8">
           {/* Filters Sidebar */}
@@ -663,29 +629,16 @@ const CategoryItems = () => {
             ) : (
               <>
                 <div
-                  className={
-                    viewMode === "grid"
-                      ? "grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                      : "space-y-4"
-                  }
+                  className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
                 >
-                  {sortedItems.map((item) =>
-                    viewMode === "grid" ? (
-                      <ItemCard
-                        key={item._id}
-                        item={item}
-                        isFavorite={favorites.includes(item._id)}
-                        onToggleFavorite={toggleFavorite}
-                      />
-                    ) : (
-                      <ItemListCard
-                        key={item._id}
-                        item={item}
-                        isFavorite={favorites.includes(item._id)}
-                        onToggleFavorite={toggleFavorite}
-                      />
-                    )
-                  )}
+                  {sortedItems.map((item) => (
+                    <ItemCard
+                      key={item._id}
+                      item={item}
+                      isFavorite={favorites.includes(item._id)}
+                      onToggleFavorite={toggleFavorite}
+                    />
+                  ))}
                 </div>
               </>
             )}
@@ -794,157 +747,7 @@ const ItemCard = ({ item, isFavorite, onToggleFavorite }) => {
           </div>
           <Link
             to={`/items/${item._id}`}
-            className="px-5 py-2.5 bg-gradient-to-r from-gray-600 to-indigo-600 text-white rounded-lg hover:from-gray-700 hover:to-indigo-700 transition-all text-sm font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
-          >
-            View Details
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Enhanced Item List Card Component
-const ItemListCard = ({ item, isFavorite, onToggleFavorite }) => {
-  const getRatingStars = (rating) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 >= 0.5;
-    
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(<StarFill key={`full-${i}`} className="text-yellow-400" size={16} />);
-    }
-    if (hasHalfStar) {
-      stars.push(<StarFill key="half" className="text-yellow-400 opacity-50" size={16} />);
-    }
-    for (let i = stars.length; i < 5; i++) {
-      stars.push(<Star key={`empty-${i}`} className="text-gray-300" size={16} />);
-    }
-    return stars;
-  };
-
-  const getConditionBadge = (condition) => {
-    const styles = {
-      excellent: "bg-green-100 text-green-700 border-green-200",
-      good: "bg-gray-100 text-gray-700 border-gray-200",
-      fair: "bg-yellow-100 text-yellow-700 border-yellow-200"
-    };
-    return styles[condition] || styles.good;
-  };
-
-  return (
-    <div className="flex overflow-hidden transition-all duration-300 bg-white shadow-sm rounded-xl hover:shadow-xl group">
-      <div className="relative flex-shrink-0 w-64 h-56 bg-gray-100">
-        {item.images && item.images.length > 0 ? (
-          <img
-            src={item.images[0].url}
-            alt={item.name}
-            className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
-          />
-        ) : (
-          <div className="flex items-center justify-center w-full h-full text-gray-300">
-            <Grid3x3GapFill size={48} />
-          </div>
-        )}
-
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            onToggleFavorite(item._id);
-          }}
-          className="absolute top-4 right-4 p-2.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110"
-        >
-          {isFavorite ? (
-            <HeartFill className="text-red-500" size={20} />
-          ) : (
-            <Heart className="text-gray-600" size={20} />
-          )}
-        </button>
-
-        {item.instantBooking && (
-          <div className="absolute top-4 left-4 bg-green-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-lg">
-            <Lightning size={14} />
-            Instant
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-col justify-between flex-1 p-6">
-        <div>
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex-1">
-              <h3 className="mb-1 text-xl font-bold text-gray-800 transition-colors group-hover:text-gray-900">
-                {item.name}
-              </h3>
-              <div className="flex items-center gap-3 mb-3">
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getConditionBadge(item.condition)}`}>
-                  {item.condition}
-                </span>
-                {item.featured && (
-                  <span className="px-3 py-1 text-xs font-semibold text-purple-700 bg-purple-100 border border-purple-200 rounded-full">
-                    Featured
-                  </span>
-                )}
-                {item.verified && (
-                  <span className="flex items-center gap-1 px-3 py-1 text-xs font-semibold text-gray-700 bg-gray-100 border border-gray-200 rounded-full">
-                    <ShieldCheck size={12} />
-                    Verified
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <p className="mb-4 text-gray-600 line-clamp-2">{item.description}</p>
-
-          <div className="flex flex-wrap items-center gap-6 text-sm">
-            {item.location?.city && (
-              <div className="flex items-center gap-1.5">
-                <GeoAlt size={16} className="text-gray-500" />
-                <span className="font-medium text-gray-700">{item.location.city}</span>
-              </div>
-            )}
-            {item.averageRating > 0 && (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center">
-                  {getRatingStars(item.averageRating)}
-                </div>
-                <span className="font-semibold text-gray-700">
-                  {item.averageRating.toFixed(1)}
-                </span>
-                <span className="text-gray-500">({item.totalReviews} reviews)</span>
-              </div>
-            )}
-            {item.rentedCount > 0 && (
-              <div className="flex items-center gap-1.5">
-                <CheckCircleFill size={16} className="text-green-500" />
-                <span className="text-gray-600">Rented {item.rentedCount} times</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between pt-6 mt-6 border-t border-gray-100">
-          <div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-gray-800">
-                ₹{item.pricePerDay}
-              </span>
-              <span className="text-gray-500">/day</span>
-            </div>
-            {item.pricePerWeek && (
-              <div className="mt-1 text-sm text-gray-600">
-                <span className="font-medium">₹{item.pricePerWeek}</span>
-                <span className="text-gray-500">/week</span>
-                <span className="ml-2 font-semibold text-green-600">
-                  Save {Math.round((1 - (item.pricePerWeek / (item.pricePerDay * 7))) * 100)}%
-                </span>
-              </div>
-            )}
-          </div>
-          <Link
-            to={`/items/${item._id}`}
-            className="px-6 py-3 font-semibold text-white transition-all transform rounded-lg shadow-md bg-gradient-to-r from-gray-600 to-indigo-600 hover:from-gray-700 hover:to-indigo-700 hover:shadow-lg hover:scale-105"
+            className="px-5 py-2.5 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors text-sm font-semibold"
           >
             View Details
           </Link>
