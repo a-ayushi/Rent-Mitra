@@ -38,7 +38,6 @@ const CategoryItems = () => {
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
   const [showFilters, setShowFilters] = useState(false);
@@ -53,8 +52,6 @@ const CategoryItems = () => {
 
   const queryClient = useQueryClient();
   const subcategoryCountCacheRef = useRef(new Map());
-
-  const limit = 12;
 
   const selectedType = searchParams.get("type") || "category";
   const selectedSubcategoryName = searchParams.get("name") || "";
@@ -159,7 +156,6 @@ const CategoryItems = () => {
 
   useEffect(() => {
     if (id) {
-      setPage(1);
       fetchCategoryItems();
       fetchSubcategories();
     }
@@ -211,7 +207,6 @@ const CategoryItems = () => {
 
   const handleApplyFilters = (e) => {
     e.preventDefault();
-    setPage(1);
   };
 
   const getItemPricePerDay = (item) => {
@@ -266,17 +261,6 @@ const CategoryItems = () => {
   });
 
   const computedTotalItems = sortedItems.length;
-  const computedTotalPages = Math.max(1, Math.ceil(computedTotalItems / limit));
-
-  useEffect(() => {
-    if (page > computedTotalPages) {
-      setPage(computedTotalPages);
-    }
-  }, [page, computedTotalPages]);
-
-  const clampedPage = Math.min(page, computedTotalPages);
-  const startIndex = (clampedPage - 1) * limit;
-  const pagedItems = sortedItems.slice(startIndex, startIndex + limit);
 
   const activeFiltersCount =
     filters.condition.length +
@@ -433,7 +417,6 @@ const CategoryItems = () => {
                   type="button"
                   onClick={() => {
                     setFilters((prev) => ({ ...prev, minPrice: "", maxPrice: "" }));
-                    setPage(1);
                   }}
                   className="p-0.5 rounded hover:bg-gray-200 text-gray-500"
                 >
@@ -457,7 +440,6 @@ const CategoryItems = () => {
                         ...prev,
                         condition: (Array.isArray(prev.condition) ? prev.condition : []).filter((c) => c !== cond),
                       }));
-                      setPage(1);
                     }}
                     className="p-0.5 rounded hover:bg-gray-200 text-gray-500"
                   >
@@ -662,7 +644,7 @@ const CategoryItems = () => {
 
           {/* Items Grid/List */}
           <div className="flex-1">
-            {pagedItems.length === 0 ? (
+            {sortedItems.length === 0 ? (
               <div className="py-20 text-center bg-white shadow-sm rounded-xl">
                 <div className="mb-6 text-7xl">🔍</div>
                 <h3 className="mb-3 text-2xl font-bold text-gray-800">
@@ -687,7 +669,7 @@ const CategoryItems = () => {
                       : "space-y-4"
                   }
                 >
-                  {pagedItems.map((item) =>
+                  {sortedItems.map((item) =>
                     viewMode === "grid" ? (
                       <ItemCard
                         key={item._id}
@@ -705,55 +687,6 @@ const CategoryItems = () => {
                     )
                   )}
                 </div>
-
-                {/* Pagination */}
-                {computedTotalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 mt-12">
-                    <button
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                      className="p-2.5 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                    >
-                      <ArrowLeft size={18} />
-                    </button>
-
-                    <div className="flex gap-2">
-                      {Array.from({ length: Math.min(5, computedTotalPages) }, (_, i) => {
-                        let pageNum;
-                        if (computedTotalPages <= 5) {
-                          pageNum = i + 1;
-                        } else if (page <= 3) {
-                          pageNum = i + 1;
-                        } else if (page >= computedTotalPages - 2) {
-                          pageNum = computedTotalPages - 4 + i;
-                        } else {
-                          pageNum = page - 2 + i;
-                        }
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => setPage(pageNum)}
-                            className={`w-11 h-11 rounded-lg font-semibold transition-all ${
-                              page === pageNum
-                                ? "bg-gray-800 text-white shadow-lg"
-                                : "bg-white border border-gray-200 hover:bg-gray-50 text-gray-700"
-                            }`}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <button
-                      onClick={() => setPage((p) => Math.min(computedTotalPages, p + 1))}
-                      disabled={page === computedTotalPages}
-                      className="p-2.5 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                    >
-                      <ArrowRight size={18} />
-                    </button>
-                  </div>
-                )}
               </>
             )}
           </div>
