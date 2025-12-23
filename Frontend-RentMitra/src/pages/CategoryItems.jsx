@@ -391,17 +391,15 @@ const CategoryItems = () => {
             <div className="relative">
               <button
                 onClick={() => setShowSortDropdown(!showSortDropdown)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all font-medium text-gray-700"
+                className="flex items-center gap-2 pl-4 pr-2 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all font-medium text-gray-700"
               >
                 <span className="text-sm">Sort by:</span>
                 <span className="font-semibold text-gray-600">
                   {sortBy === "pricePerDay" ? "Price" : "Newest"}
                 </span>
-                {showSortDropdown ? (
-                  <ChevronUp size={18} className="text-gray-400" />
-                ) : (
-                  <ChevronDown size={18} className="text-gray-400" />
-                )}
+                <span className="flex items-center justify-center w-8 h-8 rounded-md text-gray-400">
+                  {showSortDropdown ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </span>
               </button>
               {showSortDropdown && (
                 <div className="absolute left-0 z-10 w-56 mt-2 overflow-hidden bg-white border border-gray-100 shadow-xl rounded-xl">
