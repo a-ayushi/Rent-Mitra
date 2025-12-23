@@ -5,6 +5,7 @@ import './Categories.css';
 
 const Categories = () => {
   const [categories, setCategories] = useState([]);
+  const [categoryCounts, setCategoryCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -17,13 +18,13 @@ const Categories = () => {
       setLoading(true);
       const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8086';
       const response = await fetch(`${baseUrl}/api/products/categories`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       // Ensure we have an array
       if (data && Array.isArray(data)) {
         setCategories(data);
@@ -34,10 +35,33 @@ const Categories = () => {
         console.error('Unexpected data format:', data);
         setCategories([]);
       }
+
+      try {
+        const productsResponse = await fetch(`${baseUrl}/api/products/getAllProducts`);
+        if (!productsResponse.ok) {
+          throw new Error(`HTTP error! status: ${productsResponse.status}`);
+        }
+        const products = await productsResponse.json();
+        const list = Array.isArray(products)
+          ? products
+          : (Array.isArray(products?.data) ? products.data : []);
+        const counts = {};
+        list.forEach((p) => {
+          const cid = p?.categoryId;
+          if (cid == null) return;
+          const key = String(cid);
+          counts[key] = (counts[key] || 0) + 1;
+        });
+        setCategoryCounts(counts);
+      } catch (e) {
+        console.error('Error fetching product counts:', e);
+        setCategoryCounts({});
+      }
     } catch (error) {
       console.error('Error fetching categories:', error);
       setError(error.message);
       setCategories([]);
+      setCategoryCounts({});
     } finally {
       setLoading(false);
     }
@@ -114,18 +138,23 @@ const Categories = () => {
       <h2>Browse by Category</h2>
       <div className="categories-grid">
         {displayCategories.map((category) => (
-          <Link
-            key={category._id || category.id}
-            to={`/category/${category._id || category.id}`}
-            className="category-card"
-          >
-            <div className="category-icon">{category.icon || '📦'}</div>
-            <h3>{category.name}</h3>
-            <p>{category.description}</p>
-            <span className="item-count">
-              {category.itemCount || 0} items available
-            </span>
-          </Link>
+          (() => {
+            const categoryKey = category?.categoryId ?? category?._id ?? category?.id;
+            return (
+              <Link
+                key={categoryKey}
+                to={`/category/${categoryKey}`}
+                className="category-card"
+              >
+                <div className="category-icon">{category.icon || '📦'}</div>
+                <h3>{category.name}</h3>
+                <p>{category.description}</p>
+                <span className="item-count">
+                  {categoryCounts[String(category.categoryId ?? category._id ?? category.id)] ?? (category.itemCount || 0)} items available
+                </span>
+              </Link>
+            );
+          })()
         ))}
       </div>
     </div>

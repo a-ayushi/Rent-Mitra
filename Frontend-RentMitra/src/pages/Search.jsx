@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "react-query";
 import { useDebounce } from "../hooks/useDebounce";
 import itemService from "../services/itemService";
@@ -13,7 +13,6 @@ import {
   Map as MapIcon,
   ViewList as ViewListIcon,
 } from "@mui/icons-material";
-import { useCity } from "../hooks/useCity";
 
 const sortOptions = [
   { value: "newest", label: "Newest First" },
@@ -24,31 +23,15 @@ const sortOptions = [
 
 const Search = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { city } = useCity();
 
   const [filters, setFilters] = useState({
-    search: searchParams.get("q") || "",
-    category: searchParams.get("category") || "",
-    city: searchParams.get("city") || city || "",
-    minPrice: searchParams.get("minPrice") || 0,
-    maxPrice: searchParams.get("maxPrice") || 10000,
-    sortBy: searchParams.get("sortBy") || "newest",
+    search: "",
+    category: "",
+    city: "",
+    minPrice: "",
+    maxPrice: "",
+    sortBy: "newest",
   });
-
-  // Sync city context to filters.city
-  useEffect(() => {
-    if (city && filters.city !== city) {
-      setFilters((prev) => ({ ...prev, city }));
-      setPage(1);
-    }
-    // If city context is cleared, also clear filters.city
-    if (!city && filters.city) {
-      setFilters((prev) => ({ ...prev, city: "" }));
-      setPage(1);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [city]);
 
   const [page, setPage] = useState(1);
   const [drawerOpen, setDrawerOpen] = useState(false); // no longer used visually but kept for potential future use
@@ -66,18 +49,9 @@ const Search = () => {
         ...filters,
         search: debouncedSearch,
         page,
-        limit: 12,
       }),
     { keepPreviousData: true }
   );
-
-  useEffect(() => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.set(key, value);
-    });
-    setSearchParams(params, { replace: true });
-  }, [filters, setSearchParams]);
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -89,8 +63,8 @@ const Search = () => {
       search: "",
       category: "",
       city: "",
-      minPrice: 0,
-      maxPrice: 10000,
+      minPrice: "",
+      maxPrice: "",
       sortBy: "newest",
     });
     setPage(1);
@@ -143,7 +117,7 @@ const Search = () => {
             <input
               id="city"
               type="text"
-              value={city}
+              value={filters.city}
               onChange={(e) => handleFilterChange("city", e.target.value)}
               placeholder="e.g. Mumbai"
               className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500"
@@ -158,13 +132,13 @@ const Search = () => {
             type="range"
             min="0"
             max="10000"
-            value={filters.maxPrice}
+            value={filters.maxPrice === "" ? 10000 : filters.maxPrice}
             onChange={(e) => handleFilterChange("maxPrice", e.target.value)}
             className="w-full"
           />
           <div className="flex justify-between text-sm text-gray-600">
             <span>₹0</span>
-            <span>₹{filters.maxPrice}</span>
+            <span>₹{filters.maxPrice === "" ? 10000 : filters.maxPrice}</span>
           </div>
         </div>
         <div>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import api from "../services/api";
 import categoryService from "../services/categoryService";
+import itemService from "../services/itemService";
 import {
   CloudUpload,
   Delete,
@@ -26,6 +27,8 @@ const steps = [
 ];
 
 const AddItem = () => {
+  const { id } = useParams();
+  const isEditMode = Boolean(id);
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -38,6 +41,7 @@ const AddItem = () => {
   const [submitError, setSubmitError] = useState("");
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [existingImageUrls, setExistingImageUrls] = useState([]);
   const { city } = useCity();
 
   const {
@@ -45,6 +49,7 @@ const AddItem = () => {
     handleSubmit,
     watch,
     setValue,
+    getValues,
     formState: { errors },
     trigger,
     control,
@@ -119,12 +124,184 @@ const AddItem = () => {
       (cat) => String(cat.categoryId ?? cat._id) === String(selectedCategory)
     );
     setSubcategories(Array.isArray(categoryObj?.subcategories) ? categoryObj.subcategories : []);
-    setValue("subcategory", "");
+    const currentSub = getValues("subcategory");
+    const subList = Array.isArray(categoryObj?.subcategories) ? categoryObj.subcategories : [];
+    const exists = subList.some((s) => String(s?.subcategoryId ?? s?._id) === String(currentSub));
+    if (!exists) {
+      setValue("subcategory", "");
+    }
   }, [selectedCategory, setValue, categories]);
+
+  const parseJsonMaybe = (val, fallback) => {
+    if (val == null) return fallback;
+    if (typeof val === "object") return val;
+    if (typeof val !== "string") return fallback;
+    try {
+      return JSON.parse(val);
+    } catch {
+      return fallback;
+    }
+  };
+
+  const normalizeAttributeList = (val) => {
+    const arr = Array.isArray(val) ? val : [];
+    return arr
+      .map((a) => (a == null ? "" : String(a).trim()))
+      .filter(Boolean)
+      .slice(0, 8);
+  };
+
+  const extractAttributesArray = (item, dyn) => {
+    const candidates = [
+      dyn?.attributes,
+      item?.attributes,
+      dyn?.dynamicAttributes?.attributes,
+    ];
+
+    for (const candidate of candidates) {
+      if (candidate == null) continue;
+
+      // If it's already an array, use it.
+      if (Array.isArray(candidate)) {
+        const normalized = normalizeAttributeList(candidate);
+        if (normalized.length > 0) return normalized;
+        continue;
+      }
+
+      // Try JSON parse (handles both stringified array and stringified object)
+      const parsed = parseJsonMaybe(candidate, candidate);
+
+      if (Array.isArray(parsed)) {
+        const normalized = normalizeAttributeList(parsed);
+        if (normalized.length > 0) return normalized;
+        continue;
+      }
+
+      if (parsed && typeof parsed === "object") {
+        // Common shape: { attributes: [...] }
+        if (Array.isArray(parsed.attributes)) {
+          const normalized = normalizeAttributeList(parsed.attributes);
+          if (normalized.length > 0) return normalized;
+        }
+
+        // Sometimes nested/encoded: { attributes: "[...]" }
+        const inner = parseJsonMaybe(parsed.attributes, null);
+        if (Array.isArray(inner)) {
+          const normalized = normalizeAttributeList(inner);
+          if (normalized.length > 0) return normalized;
+        }
+      }
+    }
+
+    return [];
+  };
+
+  const toNumberMaybe = (v) => {
+    if (v == null || v === "") return "";
+    const n = Number(v);
+    return Number.isFinite(n) ? n : "";
+  };
+
+  const urlToFile = async (url, index) => {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const ext = (() => {
+      const fromType = blob.type?.split("/")?.[1];
+      if (fromType) return fromType;
+      const m = String(url).match(/\.([a-zA-Z0-9]+)(?:\?|#|$)/);
+      return m ? m[1] : "jpg";
+    })();
+    return new File([blob], `image-${index + 1}.${ext}`, { type: blob.type || "image/jpeg" });
+  };
+
+  const normalizeCondition = (raw) => {
+    const v = raw == null ? "" : String(raw).trim().toLowerCase();
+    if (!v) return "excellent";
+    if (v === "like new" || v === "likenew" || v === "new") return "excellent";
+    if (v === "excellent" || v === "good" || v === "fair") return v;
+    if (v === "average" || v === "ok" || v === "okay") return "fair";
+    return "excellent";
+  };
+
+  const fetchProductForEdit = useCallback(async () => {
+    if (!isEditMode) return;
+    try {
+      setLoading(true);
+      setSubmitError("");
+
+      const item = await itemService.getItem(id);
+      if (!item) {
+        setSubmitError("Item not found or could not be loaded.");
+        return;
+      }
+
+      const dyn = item?.dynamicAttributes || {};
+      const attrsArray = extractAttributesArray(item, dyn);
+
+      const rentPricesFromItem = (() => {
+        const rp = parseJsonMaybe(item?.rentPrices ?? dyn?.rentPrices, null);
+        if (rp && typeof rp === "object") return rp;
+        return {};
+      })();
+
+      const rentTypesFromItem = Array.isArray(item?.rentTypes)
+        ? item.rentTypes
+        : item?.rentTypes && typeof item.rentTypes === "object"
+          ? Array.from(item.rentTypes)
+          : ["daily"];
+
+      const existingUrls = Array.isArray(item?.images)
+        ? item.images.map((img) => img?.url).filter(Boolean)
+        : [];
+
+      setExistingImageUrls(existingUrls);
+      setImageFiles([]);
+      setImagePreviews(existingUrls);
+
+      setActiveStep(0);
+
+      const preset = {
+        name: item?.name ?? "",
+        message: item?.description ?? item?.message ?? "",
+        category: item?.categoryId != null ? String(item.categoryId) : "",
+        subcategory: item?.subcategoryId != null ? String(item.subcategoryId) : "",
+        condition: normalizeCondition(item?.condition),
+        brand: item?.brand ?? "",
+        attributes: attrsArray,
+        rentTypes: rentTypesFromItem,
+        rentPrices: {
+          daily: rentPricesFromItem?.daily ?? "",
+          weekly: rentPricesFromItem?.weekly ?? "",
+          monthly: rentPricesFromItem?.monthly ?? "",
+        },
+        securityDeposit: toNumberMaybe(item?.securityDeposit),
+        minimumRentalPeriod: toNumberMaybe(item?.minRentalDays ?? item?.dynamicAttributes?.minRentalDays),
+        maximumRentalPeriod: toNumberMaybe(item?.maxRentalDays ?? item?.dynamicAttributes?.maxRentalDays),
+        mobileNumber: item?.mobileNumber ?? "",
+        address: item?.streetAddress ?? item?.address ?? item?.location?.address ?? "",
+        navigation: item?.navigation ?? item?.location?.navigation ?? "",
+        city: item?.location?.city ?? item?.city ?? "",
+        state: item?.location?.state ?? item?.state ?? "",
+        zipCode: item?.zipCode ?? item?.zipcode ?? item?.location?.zipcode ?? "",
+        instantBooking: Boolean(dyn?.instantBooking),
+      };
+
+      Object.entries(preset).forEach(([k, v]) => setValue(k, v, { shouldDirty: false }));
+    } catch (error) {
+      console.error("Failed to load item for edit", error);
+      setSubmitError("Failed to load item data.");
+    } finally {
+      setLoading(false);
+    }
+  }, [id, isEditMode, setValue]);
+
+  useEffect(() => {
+    fetchProductForEdit();
+  }, [fetchProductForEdit]);
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
-    if (files.length + imageFiles.length > 5) {
+    if (files.length + imagePreviews.length > 5) {
       setSubmitError("You can upload a maximum of 5 images.");
       return;
     }
@@ -136,9 +313,16 @@ const AddItem = () => {
   };
 
   const removeImage = (index) => {
-    URL.revokeObjectURL(imagePreviews[index]);
-    setImageFiles((files) => files.filter((_, i) => i !== index));
+    const preview = imagePreviews[index];
+    if (typeof preview === "string" && preview.startsWith("blob:")) {
+      URL.revokeObjectURL(preview);
+    }
     setImagePreviews((previews) => previews.filter((_, i) => i !== index));
+    if (typeof preview === "string" && preview.startsWith("http")) {
+      setExistingImageUrls((prev) => prev.filter((u) => u !== preview));
+      return;
+    }
+    setImageFiles((files) => files.filter((_, i) => i !== index));
   };
 
   const handleNext = async () => {
@@ -160,7 +344,7 @@ const AddItem = () => {
     ][activeStep];
 
     const isValid = await trigger(fieldsToValidate);
-    if (activeStep === 2 && imageFiles.length === 0) {
+    if (activeStep === 2 && imagePreviews.length === 0) {
       setSubmitError("Please upload at least one image.");
       return;
     }
@@ -224,46 +408,68 @@ const AddItem = () => {
       const formData = new FormData();
 
       // Controller expects @RequestParam("files") List<MultipartFile>
-      imageFiles.forEach((file) => formData.append("files", file));
+      const filesToSend = (() => {
+        const local = Array.isArray(imageFiles) ? imageFiles : [];
+        if (local.length > 0) return Promise.resolve(local);
+        const urls = Array.isArray(existingImageUrls) ? existingImageUrls : [];
+        if (!isEditMode || urls.length === 0) return Promise.resolve([]);
+        return Promise.all(urls.slice(0, 5).map((u, idx) => urlToFile(u, idx)));
+      })();
+
+      const resolvedFiles = await filesToSend;
+      if (!Array.isArray(resolvedFiles) || resolvedFiles.length === 0) {
+        setSubmitError("Please upload at least one image.");
+        return;
+      }
+      resolvedFiles.forEach((file) => formData.append("files", file));
 
       // Map AddItem form -> Java ProductRequest
       const categoryId = data.category ? Number(data.category) : undefined;
       const subcategoryId = data.subcategory ? Number(data.subcategory) : undefined;
 
-      const addressString = [
-        data.address,
-        data.city,
-        data.state,
-        data.zipCode ? `- ${data.zipCode}` : undefined,
-      ]
-        .filter(Boolean)
-        .join(", ");
-
       const productRequest = {
+        ...(isEditMode ? { productId: Number(id) } : {}),
         name: data.name,
+        description: data.message || undefined,
         brand: data.brand || undefined,
+        condition: data.condition || undefined,
+        mobileNumber: data.mobileNumber || undefined,
         categoryId,
         subcategoryId,
-        rentType:
-          Array.isArray(data.rentTypes) && data.rentTypes.length > 0
-            ? String(data.rentTypes[0])
-            : "daily",
-        rentBasedOnType: (() => {
+        rentTypes: Array.isArray(data.rentTypes) ? data.rentTypes : [],
+        rentPrices: (() => {
           const types = Array.isArray(data.rentTypes) ? data.rentTypes : [];
-          const primary = types.length > 0 ? String(types[0]) : "daily";
-          const val = data?.rentPrices?.[primary];
-          return val ? Number(val) : undefined;
+          const prices = data?.rentPrices || {};
+          const selected = {};
+          types.forEach((t) => {
+            const key = String(t);
+            const raw = prices?.[key];
+            if (raw !== "" && raw != null) {
+              selected[key] = Number(raw);
+            }
+          });
+          return selected;
         })(),
-        address: addressString || undefined,
+        securityDeposit:
+          data.securityDeposit === "" || data.securityDeposit == null
+            ? undefined
+            : Number(data.securityDeposit),
+        minRentalDays:
+          data.minimumRentalPeriod === "" || data.minimumRentalPeriod == null
+            ? 0
+            : Number(data.minimumRentalPeriod),
+        maxRentalDays:
+          data.maximumRentalPeriod === "" || data.maximumRentalPeriod == null
+            ? 0
+            : Number(data.maximumRentalPeriod),
         navigation: data.navigation || undefined,
-        message: data.message || undefined,
-        mobileNumber: data.mobileNumber || undefined,
-        dynamicAttributes: {
+        streetAddress: data.address || undefined,
+        city: data.city || undefined,
+        state: data.state || undefined,
+        zipcode: data.zipCode || undefined,
+        attributes: JSON.stringify({
           condition: data.condition || "",
-          securityDeposit: data.securityDeposit ? String(data.securityDeposit) : "",
-          minimumRentalPeriod: data.minimumRentalPeriod ? String(data.minimumRentalPeriod) : "",
-          maximumRentalPeriod: data.maximumRentalPeriod ? String(data.maximumRentalPeriod) : "",
-          instantBooking: typeof data.instantBooking === "boolean" ? String(data.instantBooking) : "",
+          instantBooking: typeof data.instantBooking === "boolean" ? data.instantBooking : false,
           rentPrices: (() => {
             const types = Array.isArray(data.rentTypes) ? data.rentTypes : [];
             const prices = data?.rentPrices || {};
@@ -271,10 +477,10 @@ const AddItem = () => {
             types.forEach((t) => {
               selected[String(t)] = prices?.[String(t)] ?? "";
             });
-            return JSON.stringify(selected);
+            return selected;
           })(),
-          attributes: JSON.stringify(Array.isArray(data.attributes) ? data.attributes : []),
-        },
+          attributes: Array.isArray(data.attributes) ? data.attributes : [],
+        }),
       };
 
       // Controller expects @RequestPart("data") ProductRequest data
@@ -283,13 +489,18 @@ const AddItem = () => {
         new Blob([JSON.stringify(productRequest)], { type: "application/json" })
       );
 
-      await api.post("/api/products/addproduct", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      navigate("/my-listings");
+      if (isEditMode) {
+        await itemService.editProduct(productRequest, resolvedFiles);
+        navigate(`/items/${id}`);
+      } else {
+        await api.post("/api/products/addproduct", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        navigate("/my-listings");
+      }
     } catch (error) {
-      setSubmitError(error.response?.data?.error || "Failed to create item.");
+      const fallback = isEditMode ? "Failed to update item." : "Failed to create item.";
+      setSubmitError(error?.response?.data?.error || error?.message || fallback);
     } finally {
       setLoading(false);
     }

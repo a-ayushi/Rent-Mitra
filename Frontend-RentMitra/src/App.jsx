@@ -37,7 +37,6 @@ import UserDashboard from "./pages/UserDashboard";
 import Profile from "./pages/Profile";
 import MyListings from "./pages/MyListings";
 import AddItem from "./pages/AddItem";
-import EditItem from "./pages/EditItem";
 import MyRentals from "./pages/MyRentals";
 import Favorites from "./pages/Favorites";
 import Messages from "./pages/Messages";
@@ -46,6 +45,7 @@ import CategoryItems from "./pages/CategoryItems";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Terms from "./pages/Terms";
+import BecomeRenter from "./pages/BecomeRenter";
 
 // Create theme
 const theme = createTheme({
@@ -107,6 +107,7 @@ const AppContent = () => {
                         <Route path="/register" element={<Register />} />
                         <Route path="/search" element={<Search />} />
                         <Route path="/categories" element={<Categories />} />
+                        <Route path="/become-a-renter" element={<BecomeRenter />} />
                         <Route
                           path="/categories/:category"
                           element={<Search />}
@@ -163,7 +164,7 @@ const AppContent = () => {
                           path="/edit-item/:id"
                           element={
                             <PrivateRoute>
-                              <EditItem />
+                              <AddItem />
                             </PrivateRoute>
                           }
                         />

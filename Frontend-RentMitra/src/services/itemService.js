@@ -1,5 +1,62 @@
 import api from './api';
 
+const decodeJwtPayload = (token) => {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length < 2) return null;
+  try {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const json = atob(padded);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+};
+
+const normalizeMobileNumber = (value) => {
+  if (value == null) return '';
+  const digits = String(value).replace(/\D/g, '');
+  if (digits.length === 10) return digits;
+  if (digits.length === 12 && digits.startsWith('91')) return digits.slice(2);
+  if (digits.length > 10) return digits.slice(-10);
+  return digits;
+};
+
+const getMobileCandidates = (value) => {
+  const raw = value == null ? '' : String(value).trim();
+  const digits10 = normalizeMobileNumber(raw);
+
+  // DB stores plain 10-digit numbers, so try that FIRST.
+  // Only include country-code variants if we actually have 10 digits.
+  const candidates = [];
+  if (digits10 && digits10.length === 10) {
+    candidates.push(digits10, raw, `+91${digits10}`, `91${digits10}`);
+  } else {
+    // If we cannot derive a phone number, only try raw (prevents calls like mobileNumber=+91)
+    candidates.push(raw);
+  }
+
+  return Array.from(
+    new Set(
+      candidates
+        .map((v) => (v == null ? '' : String(v).trim()))
+        .filter(Boolean)
+    )
+  );
+};
+
+const getMobileNumberFromToken = () => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const payload = decodeJwtPayload(token);
+  const raw = payload?.sub ?? payload?.subject ?? payload?.phone ?? payload?.phoneNo ?? payload?.mobilenumber;
+
+  // If subject is an email, do not attempt mobile lookup.
+  const str = raw == null ? '' : String(raw);
+  if (str.includes('@')) return '';
+  return str;
+};
+
 const normalizeImageUrls = (imageUrls) => {
   if (Array.isArray(imageUrls)) {
     return imageUrls.map((u) => (u == null ? '' : String(u).trim())).filter(Boolean);
@@ -117,24 +174,169 @@ const mapProductToItem = (p, fallbackId) => {
   };
 };
 
+const getItemPrice = (item) => {
+  const direct = item?.pricePerDay;
+  if (typeof direct === 'number' && Number.isFinite(direct)) return direct;
+
+  const rp = item?.rentPrices;
+  if (rp && typeof rp === 'object') {
+    const values = Object.values(rp)
+      .map((v) => (typeof v === 'number' ? v : Number(v)))
+      .filter((v) => Number.isFinite(v));
+    if (values.length > 0) return Math.min(...values);
+  }
+
+  return null;
+};
+
+const getCreatedAtMs = (it) => {
+  const raw = it?.createdAt ?? it?.createdOn ?? it?.createdDate;
+  if (!raw) return 0;
+  const t = new Date(raw).getTime();
+  return Number.isFinite(t) ? t : 0;
+};
+
+const applyClientFilters = (items, params) => {
+  const searchRaw = params?.search ?? params?.q ?? '';
+  const search = String(searchRaw).trim().toLowerCase();
+
+  const category = params?.categoryId ?? params?.category;
+  const subcategory = params?.subcategoryId ?? params?.subcategory;
+  const city = params?.city == null ? '' : String(params.city).trim().toLowerCase();
+
+  const minPriceRaw = params?.minPrice;
+  const maxPriceRaw = params?.maxPrice;
+  const minPrice = minPriceRaw === '' || minPriceRaw == null ? null : Number(minPriceRaw);
+  const maxPrice = maxPriceRaw === '' || maxPriceRaw == null ? null : Number(maxPriceRaw);
+
+  const sortBy = params?.sortBy == null ? 'newest' : String(params.sortBy);
+  const page = params?.page == null ? 1 : Math.max(1, Number(params.page) || 1);
+  const limit = params?.limit == null ? undefined : Math.max(1, Number(params.limit) || 1);
+
+  const filtered = (Array.isArray(items) ? items : []).filter((it) => {
+    if (search) {
+      const hay = [it?.name, it?.title, it?.description, it?.brand]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+
+    if (category != null && String(category).trim() !== '') {
+      if (String(it?.categoryId ?? it?.category?._id ?? it?.category) !== String(category)) return false;
+    }
+    if (subcategory != null && String(subcategory).trim() !== '') {
+      if (String(it?.subcategoryId ?? it?.subcategory?._id ?? it?.subcategory) !== String(subcategory)) return false;
+    }
+
+    if (city) {
+      const itCity = it?.location?.city ?? it?.city;
+      if (!itCity || String(itCity).trim().toLowerCase() !== city) return false;
+    }
+
+    const price = getItemPrice(it);
+    if (minPrice != null && Number.isFinite(minPrice)) {
+      if (price == null || price < minPrice) return false;
+    }
+    if (maxPrice != null && Number.isFinite(maxPrice)) {
+      if (price == null || price > maxPrice) return false;
+    }
+
+    return true;
+  });
+
+  const sorted = filtered.slice().sort((a, b) => {
+    if (sortBy === 'price_low') {
+      return (getItemPrice(a) ?? Number.POSITIVE_INFINITY) - (getItemPrice(b) ?? Number.POSITIVE_INFINITY);
+    }
+    if (sortBy === 'price_high') {
+      return (getItemPrice(b) ?? Number.NEGATIVE_INFINITY) - (getItemPrice(a) ?? Number.NEGATIVE_INFINITY);
+    }
+    if (sortBy === 'rating') {
+      return (Number(b?.rating) || 0) - (Number(a?.rating) || 0);
+    }
+
+    return getCreatedAtMs(b) - getCreatedAtMs(a);
+  });
+
+  const total = sorted.length;
+  const pages = limit ? Math.max(1, Math.ceil(total / limit)) : 1;
+  const clampedPage = Math.min(page, pages);
+  const start = limit ? (clampedPage - 1) * limit : 0;
+  const end = limit ? start + limit : undefined;
+  const pageItems = limit ? sorted.slice(start, end) : sorted;
+
+  return {
+    items: pageItems,
+    pagination: {
+      total,
+      pages,
+      page: clampedPage,
+    },
+  };
+};
+
 const itemService = {
+
   // Get items with filters
   getItems: async (params) => {
-    const products = await api.get('/api/products/getAllProducts');
+    try {
+      const products = await api.get('/api/products/getAllProducts');
 
-    const rawItems = Array.isArray(products) ? products : [];
+      const rawItems = Array.isArray(products) ? products : [];
 
-    // Map Java ProductDto -> shape expected by existing React UI / ItemCard
-    const items = rawItems.map((p) => mapProductToItem(p));
+      // Map Java ProductDto -> shape expected by existing React UI / ItemCard
+      const items = rawItems.map((p) => mapProductToItem(p));
 
-    return {
-      items,
-      pagination: {
-        total: items.length,
-        pages: 1,
-        page: 1,
-      },
-    };
+      return applyClientFilters(items, params);
+    } catch (e) {
+      try {
+        const limit = typeof params?.limit === 'number' ? params.limit : undefined;
+        let categoryIds = [];
+        if (params?.categoryId != null) {
+          categoryIds = [params.categoryId];
+        } else {
+          const categories = await api.get('/api/products/categories');
+
+          categoryIds = Array.isArray(categories)
+            ? categories
+                .map((c) => c?.categoryId)
+                .filter((id) => id != null)
+            : [];
+        }
+
+        const collected = [];
+        const maxCategoriesToFetch = 6;
+
+        for (const categoryId of categoryIds.slice(0, maxCategoriesToFetch)) {
+          try {
+            const productsByCat = await api.get('/api/products/get-products-by-category', {
+              params: { categoryId },
+            });
+            if (Array.isArray(productsByCat)) {
+              collected.push(...productsByCat);
+            }
+          } catch {
+            // ignore and continue
+          }
+
+          if (limit && collected.length >= limit) break;
+        }
+
+        const items = collected.map((p) => mapProductToItem(p));
+
+        return applyClientFilters(items, params);
+      } catch {
+        return {
+          items: [],
+          pagination: {
+            total: 0,
+            pages: 1,
+            page: 1,
+          },
+        };
+      }
+    }
   },
 
   // Get items for a specific category (Java products API)
@@ -150,11 +352,84 @@ const itemService = {
     return { items };
   },
 
+  // Get items for a specific subcategory name (Java products API)
+  getItemsBySubcategoryName: async (subcategoryName) => {
+    const res = await api.get(
+      `/api/products/productsbysubcategory/${encodeURIComponent(subcategoryName)}`
+    );
+
+    const rawItems = Array.isArray(res)
+      ? res
+      : Array.isArray(res?.data)
+        ? res.data
+        : [];
+
+    const items = rawItems.map((p) => mapProductToItem(p));
+
+    return { items };
+  },
+
   // Get single item (Java products API)
   getItem: async (id) => {
     const p = await api.get(`/api/products/get-by-id?productId=${id}`);
 
     return mapProductToItem(p, id);
+  },
+
+  editProduct: async (productRequest, files = []) => {
+    const formData = new FormData();
+
+    (Array.isArray(files) ? files : []).forEach((file) => {
+      if (file) {
+        formData.append('files', file);
+      }
+    });
+
+    formData.append(
+      'data',
+      new Blob([JSON.stringify(productRequest || {})], { type: 'application/json' })
+    );
+
+    return api.patch('/api/products/editproduct', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  getProductsByMobileNumber: async (mobileNumber) => {
+    const candidates = getMobileCandidates(mobileNumber);
+    const all = [];
+
+    for (const candidate of candidates) {
+      const res = await api.get('/api/products/get-products-by-mobile-number', {
+        params: { mobileNumber: candidate },
+      });
+
+      const rawItems = Array.isArray(res) ? res : [];
+      if (rawItems.length > 0) {
+        rawItems.forEach((p) => all.push(p));
+        break;
+      }
+    }
+
+    const seen = new Set();
+    const items = all
+      .map((p) => mapProductToItem(p))
+      .filter((it) => {
+        const key = it?._id == null ? '' : String(it._id);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+    return { items };
+  },
+
+  getMyOwnedProducts: async () => {
+    const mobileNumber = getMobileNumberFromToken();
+    if (!mobileNumber) return { items: [] };
+    return itemService.getProductsByMobileNumber(mobileNumber);
   },
 
   // Create item
