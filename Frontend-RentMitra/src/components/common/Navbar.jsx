@@ -22,6 +22,7 @@ import {
 import { Avatar } from '@mui/material';
 import ProfileSidebar from './ProfileSidebar';
 import { useCity } from '../../hooks/useCity';
+import LoadingScreen from './LoadingScreen';
 
 const Navbar = () => {
   const location = useLocation();
@@ -266,7 +267,9 @@ const Navbar = () => {
                 <div className="p-3 overflow-y-auto max-h-64">
                   <div className="px-3 py-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">All Locations</div>
                   {loadingCities ? (
-                    <div className="px-3 py-2 text-sm text-gray-500">Loading cities...</div>
+                    <div className="px-3 py-2">
+                      <LoadingScreen message="Loading cities" minHeight="auto" size={18} />
+                    </div>
                   ) : cityFetchError ? (
                     <div className="px-3 py-2 text-sm text-red-500">{cityFetchError}</div>
                   ) : (
@@ -648,7 +651,7 @@ const Navbar = () => {
             </div>
             <div className="flex-1 p-4 overflow-y-auto" style={{ maxHeight: 350 }}>
               {chatLoading ? (
-                <div className="text-center text-gray-400">Loading...</div>
+                <LoadingScreen message="Loading conversations" minHeight="auto" size={18} />
               ) : userChats.length === 0 ? (
                 <div className="text-center text-gray-400">No conversations yet.</div>
               ) : (

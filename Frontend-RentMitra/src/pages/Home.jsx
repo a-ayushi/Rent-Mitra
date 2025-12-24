@@ -26,7 +26,7 @@ const BeautifulRentalHome = () => {
   const [stats, setStats] = useState({
     renters: 0,
     items: 0,
-    rating: 0,
+    rating: null,
     verified: 0,
   });
 
@@ -238,6 +238,7 @@ const BeautifulRentalHome = () => {
     try {
       // Fetch categories
       const categoriesData = await api.get("/api/products/categories");
+
       const mappedCategories = Array.isArray(categoriesData) 
         ? categoriesData.map((cat, idx) => ({
             id: cat.categoryId,
@@ -255,14 +256,38 @@ const BeautifulRentalHome = () => {
         limit: 8,
         city: city === "India" ? "" : city,
       });
-      setFeaturedItems(Array.isArray(itemsData?.items) ? itemsData.items : []);
+      const featured = Array.isArray(itemsData?.items) ? itemsData.items : [];
+      setFeaturedItems(featured);
+
+      const extractRating = (item) => {
+        const candidates = [
+          item?.averageRating,
+          item?.avgRating,
+          item?.rating?.average,
+          item?.rating,
+          item?.stars,
+          item?.starRating,
+        ];
+        for (const c of candidates) {
+          const n = Number(c);
+          if (Number.isFinite(n) && n >= 0 && n <= 5) return n;
+        }
+        return null;
+      };
+
+      const ratings = featured
+        .map(extractRating)
+        .filter((n) => Number.isFinite(n));
+      const avgRating = ratings.length
+        ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10
+        : null;
 
       // You can fetch real stats from API if available
       // For now using placeholder logic
       setStats({
         renters: 50000,
         items: mappedCategories.reduce((sum, cat) => sum + cat.itemCount, 0) || 0,
-        rating: 4.8,
+        rating: avgRating,
         verified: 98,
       });
     } catch (error) {
@@ -411,7 +436,11 @@ const BeautifulRentalHome = () => {
               <div className="flex items-center gap-3 justify-center">
                 <div className="text-blue-400"><Star /></div>
                 <div>
-                  <div className="text-2xl font-bold">{useCountUp(stats.rating, { durationMs: 900, decimals: 1 }).toFixed(1)}★</div>
+                  <div className="text-2xl font-bold">
+                    {stats.rating == null
+                      ? "Unavailable"
+                      : `${useCountUp(stats.rating, { durationMs: 900, decimals: 1 }).toFixed(1)}★`}
+                  </div>
                   <div className="text-sm text-gray-400">Average Rating</div>
                 </div>
               </div>
@@ -467,14 +496,13 @@ const BeautifulRentalHome = () => {
       </section>
 
       {/* Featured Rentals */}
-      <section ref={setSectionRef(2)} className="py-16 bg-white">
+      <section ref={setSectionRef(2)} className="py-12 bg-white">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-12">
+          <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
                 🔥 Trending Rentals
               </h2>
-              <p className="text-gray-600">Most popular items this week</p>
             </div>
             <button 
               onClick={() => navigate('/search')}

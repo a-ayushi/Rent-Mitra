@@ -44,6 +44,8 @@ const UserDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const userName = (user?.name || "").trim();
+
   const mobileNumber = user?.phone || user?.mobilenumber || user?.mobileNumber || "";
 
   const { data: ownedProductsData } = useQuery(
@@ -63,7 +65,12 @@ const UserDashboard = () => {
   );
 
   if (isLoading) {
-    return <div className="flex justify-center items-center min-h-[60vh]">Loading...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 min-h-[60vh]">
+        <div className="w-6 h-6 border-2 border-gray-300 rounded-full border-t-gray-900 animate-spin" />
+        <div className="text-sm font-medium text-gray-600">Loading your dashboard</div>
+      </div>
+    );
   }
 
   const stats = [
@@ -77,8 +84,9 @@ const UserDashboard = () => {
     <div className="min-h-screen bg-gray-100">
       <div className="container px-4 py-8 mx-auto sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Welcome back, {user?.name}!</h1>
-          <p className="mt-1 text-gray-600">Here's your rental dashboard overview.</p>
+          <h1 className="text-3xl font-bold text-gray-800">
+            {userName ? `Welcome back, ${userName}!` : "Welcome back!"}
+          </h1>
         </div>
 
         {/* Stats */}
@@ -113,33 +121,6 @@ const UserDashboard = () => {
               <button onClick={() => navigate("/profile")} className="w-full p-3 text-left text-gray-800 transition bg-gray-200 rounded-lg hover:bg-gray-300">Edit Profile</button>
             </div>
           </div>
-        </div>
-
-        {/* Upcoming Rentals */}
-        <div className="p-6 mt-8 bg-white shadow-lg rounded-2xl">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-800">Upcoming Rentals</h2>
-            <button onClick={() => navigate("/my-rentals")} className="text-sm font-medium text-gray-600 hover:text-gray-800">View All</button>
-          </div>
-          {dashboardData?.upcomingRentals?.length > 0 ? (
-            <ul className="space-y-4">
-              {dashboardData.upcomingRentals.map((rental) => (
-                <li key={rental._id} onClick={() => navigate(`/rentals/${rental._id}`)} className="flex items-center gap-4 p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-                  <img src={rental.item.images[0]?.url} alt={rental.item.title} className="object-cover w-20 h-20 rounded-lg"/>
-                  <div className="flex-grow">
-                    <p className="font-semibold text-gray-800">{rental.item.title}</p>
-                    <p className="text-sm text-gray-500">{format(new Date(rental.rentalPeriod.from), "MMM dd")} - {format(new Date(rental.rentalPeriod.to), "MMM dd, yyyy")}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 rounded-full">{rental.status}</span>
-                    <p className="text-lg font-bold">₹{rental.pricing.total}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="py-8 text-center text-gray-500">No upcoming rentals.</p>
-          )}
         </div>
       </div>
     </div>

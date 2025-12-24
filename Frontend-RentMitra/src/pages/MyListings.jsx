@@ -5,6 +5,7 @@ import itemService from '../services/itemService';
 import { Add, Edit, Delete, Visibility, VisibilityOff } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
+import LoadingScreen from '../components/common/LoadingScreen';
 
 const MyListings = () => {
   const navigate = useNavigate();
@@ -51,7 +52,11 @@ const MyListings = () => {
           </button>
         </div>
 
-        {isLoading ? <div>Loading...</div> : error ? <div>Error loading listings.</div> : (
+        {isLoading ? (
+          <LoadingScreen message="Loading your listings" />
+        ) : error ? (
+          <div>Error loading listings.</div>
+        ) : (
           <>
             <div className="overflow-hidden bg-white shadow-xl rounded-2xl">
               {Array.isArray(data?.data) && data.data.length > 0 ? (

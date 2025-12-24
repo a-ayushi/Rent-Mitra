@@ -3,6 +3,7 @@ import { Send as SendIcon, Search as SearchIcon } from '@mui/icons-material';
 import axios from 'axios';
 import { useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import LoadingScreen from '../components/common/LoadingScreen';
 
 const Messages = () => {
   const { user } = useAuth();
@@ -66,7 +67,9 @@ const Messages = () => {
             </div>
             <div className="flex-grow overflow-y-auto">
               {loadingChats ? (
-                <div className="p-4 text-center text-gray-400">Loading...</div>
+                <div className="h-full p-4">
+                  <LoadingScreen message="Loading conversations" minHeight="100%" size={18} />
+                </div>
               ) : conversations.length === 0 ? (
                 <div className="p-4 text-center text-gray-400">No conversations yet.</div>
               ) : (
@@ -97,7 +100,9 @@ const Messages = () => {
             </div>
             <div className="flex-grow p-4 overflow-y-auto bg-gray-50">
               {loadingMessages ? (
-                <div className="text-center text-gray-400">Loading...</div>
+                <div className="h-full">
+                  <LoadingScreen message="Loading messages" minHeight="100%" size={18} />
+                </div>
               ) : messages.length === 0 ? (
                 <div className="text-center text-gray-400">No messages yet.</div>
               ) : (

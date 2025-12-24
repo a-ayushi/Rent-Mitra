@@ -6,6 +6,7 @@ import userService from '../services/userService';
 import itemService from '../services/itemService';
 import ItemCard from '../components/items/ItemCard';
 import ReviewList from '../components/reviews/ReviewList';
+import LoadingScreen from '../components/common/LoadingScreen';
 import {
   Edit as EditIcon,
   Verified as VerifiedIcon,
@@ -59,7 +60,7 @@ const Profile = () => {
     }
   }, [isOwnProfile, userId, profileData]);
 
-  if (profileLoading) return <div>Loading...</div>;
+  if (profileLoading) return <LoadingScreen message="Loading profile" />;
   if (!profileData?.user) return <div>User not found</div>;
 
   const { user, stats } = profileData;
@@ -151,7 +152,7 @@ const Profile = () => {
         {/* Tab Content */}
         <div>
           {tab === 'listings' && (
-            itemsLoading ? <div>Loading listings...</div> :
+            itemsLoading ? <LoadingScreen message="Loading listings" /> :
             userItems?.items?.length > 0 ? (
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {userItems.items.map(item => <ItemCard item={item} key={item._id} />)}
@@ -164,7 +165,7 @@ const Profile = () => {
             )
           )}
           {tab === 'reviews' && (
-            reviewsLoading ? <div>Loading reviews...</div> :
+            reviewsLoading ? <LoadingScreen message="Loading reviews" /> :
             <div className="p-8 bg-white shadow-lg rounded-2xl">
               <ReviewList reviews={reviews?.reviews} />
             </div>
