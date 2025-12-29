@@ -10,6 +10,7 @@ import {
   People as PeopleIcon,
   AttachMoney as MoneyIcon,
   CalendarToday as CalendarIcon,
+  ShowChart as ShowChartIcon,
 } from "@mui/icons-material";
 import {
   LineChart,
@@ -80,10 +81,15 @@ const UserDashboard = () => {
     { title: "Recent Earnings", value: `₹${dashboardData?.stats?.recentEarnings || 0}`, icon: <MoneyIcon className="text-white"/>, color: "bg-purple-500", link: "/earnings" },
   ];
 
+  const earningsTrend = Array.isArray(dashboardData?.earningsTrend)
+    ? dashboardData.earningsTrend
+    : [];
+  const hasEarningsTrend = earningsTrend.length > 0;
+
   return (
     <div className="min-h-screen bg-gray-100">
-      <div className="container px-4 py-8 mx-auto sm:px-6 lg:px-8">
-        <div className="mb-8">
+      <div className="container px-4 pt-4 pb-8 mx-auto sm:px-6 lg:px-8">
+        <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-800">
             {userName ? `Welcome back, ${userName}!` : "Welcome back!"}
           </h1>
@@ -98,21 +104,30 @@ const UserDashboard = () => {
           {/* Earnings Chart */}
           <div className="p-6 bg-white shadow-lg lg:col-span-2 rounded-2xl">
             <h2 className="mb-4 text-xl font-bold text-gray-800">Earnings Trend</h2>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dashboardData?.earningsTrend || []}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="_id.month" tickFormatter={(val) => format(new Date(2024, val - 1), "MMM")} />
-                  <YAxis />
-                  <Tooltip formatter={(val) => `₹${val}`} />
-                  <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            {hasEarningsTrend ? (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={earningsTrend}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="_id.month" tickFormatter={(val) => format(new Date(2024, val - 1), "MMM")} />
+                    <YAxis />
+                    <Tooltip formatter={(val) => `₹${val}`} />
+                    <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-40 flex flex-col items-center justify-center gap-3 text-gray-500">
+                <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-full">
+                  <ShowChartIcon className="text-gray-400" />
+                </div>
+                <div className="text-sm font-medium">No earnings data</div>
+              </div>
+            )}
           </div>
 
           {/* Quick Actions */}
-          <div className="p-6 bg-white shadow-lg rounded-2xl">
+          <div className="self-start p-6 bg-white shadow-lg rounded-2xl">
             <h2 className="mb-4 text-xl font-bold text-gray-800">Quick Actions</h2>
             <div className="space-y-3">
               <button onClick={() => navigate("/add-item")} className="w-full p-3 text-left text-white transition bg-gray-500 rounded-lg hover:bg-gray-600">List New Item</button>

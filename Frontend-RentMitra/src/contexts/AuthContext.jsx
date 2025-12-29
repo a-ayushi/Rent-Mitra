@@ -2,6 +2,7 @@
 import React, { createContext, useState, useEffect } from "react";
 import api from "../services/api";
 import authService from "../services/authService";
+import userService from "../services/userService";
 
 export const AuthContext = createContext();
 
@@ -13,6 +14,80 @@ export const AuthProvider = ({ children }) => {
   const [refreshToken, setRefreshToken] = useState(
     () => localStorage.getItem("refreshToken") || ""
   );
+
+  const decodeJwtPayload = (token) => {
+    if (!token || typeof token !== 'string') return null;
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    try {
+      const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+      const json = atob(padded);
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  };
+
+  const normalizePhone10 = (value) => {
+    if (value == null) return '';
+    const digits = String(value).replace(/\D/g, '');
+    if (digits.length === 10) return digits;
+    if (digits.length === 12 && digits.startsWith('91')) return digits.slice(2);
+    if (digits.length > 10) return digits.slice(-10);
+    return digits;
+  };
+
+  const getPhoneFromToken = (token) => {
+    const payload = decodeJwtPayload(token);
+    const raw = payload?.sub ?? payload?.subject ?? payload?.phone ?? payload?.phoneNo ?? payload?.mobilenumber;
+    const str = raw == null ? '' : String(raw);
+    if (str.includes('@')) return '';
+    return normalizePhone10(str);
+  };
+
+  const extractUserFromMeResponse = (me) => {
+    if (!me) return null;
+    if (me.user) return me.user;
+    if (me.data && me.data.user) return me.data.user;
+    if (
+      me.id != null ||
+      me._id != null ||
+      me.email != null ||
+      me.phone != null ||
+      me.phoneNo != null ||
+      me.mobilenumber != null ||
+      me.name != null
+    ) {
+      return me;
+    }
+    return null;
+  };
+
+  const hydrateUserInBackground = (token) => {
+    const phone10 = getPhoneFromToken(token);
+
+    const run = async () => {
+      if (phone10) {
+        const res = await userService.getByPhoneNumber(phone10);
+        const phoneUser = res?.data ?? res?.user ?? res;
+        if (phoneUser) {
+          setUser({ ...phoneUser, phone: phoneUser.phone ?? phoneUser.mobilenumber ?? phone10 });
+        }
+        return;
+      }
+
+      const me = await api.get("/auth/me");
+      const meUser = extractUserFromMeResponse(me);
+      if (meUser) {
+        setUser(meUser);
+      }
+    };
+
+    run().catch((error) => {
+      console.error('Auth hydrate failed:', error);
+    });
+  };
 
   useEffect(() => {
     checkAuth();
@@ -38,15 +113,26 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
     }
 
-    // Best-effort validation (do not force logout on failure)
-    try {
-      if (token) {
-        await api.get("/auth/me");
-      }
-    } catch (error) {
-      console.error("Auth check failed:", error);
-    } finally {
-      setLoading(false);
+    // Do not block initial route rendering on user hydration.
+    // Hydrate best-effort in the background.
+    if (token) {
+      hydrateUserInBackground(token);
+    }
+
+    setLoading(false);
+  };
+
+  const refreshUserFromDb = async (phoneOverride) => {
+    const token = localStorage.getItem('token');
+    const tokenPhone = getPhoneFromToken(token);
+    const currentPhone = normalizePhone10(
+      phoneOverride || user?.phone || user?.mobilenumber || user?.mobileNumber || user?.phoneNo || tokenPhone
+    );
+    if (!currentPhone) return;
+    const res = await userService.getByPhoneNumber(currentPhone);
+    const phoneUser = res?.data ?? res?.user ?? res;
+    if (phoneUser) {
+      setUser({ ...phoneUser, phone: phoneUser.phone ?? phoneUser.mobilenumber ?? currentPhone });
     }
   };
 
@@ -124,6 +210,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     register,
     checkAuth,
+    refreshUserFromDb,
     refreshToken,
     setRefreshToken,
     refreshAuthToken,

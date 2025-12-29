@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -86,6 +86,10 @@ const queryClient = new QueryClient({
 
 const AppContent = () => {
   const location = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname, location.search]);
 
   const isLoginRoute = location.pathname === "/login";
   const isRegisterRoute = location.pathname === "/register";

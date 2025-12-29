@@ -1,6 +1,31 @@
 import api from './api';
 
 const userService = {
+  getByPhoneNumber: (phoneNumber) => {
+    return api.get('/user/get-by-phonenumber', {
+      params: { phonenumber: phoneNumber },
+    });
+  },
+
+  upsertUserWithImage: (userPayload, imageFile) => {
+    const formData = new FormData();
+
+    formData.append(
+      'data',
+      new Blob([JSON.stringify(userPayload || {})], { type: 'application/json' })
+    );
+
+    if (imageFile) {
+      formData.append('image', imageFile);
+    }
+
+    return api.post('/user/register', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
   getProfile: (userId) => {
     return api.get(`/users/${userId || 'profile'}`);
   },

@@ -670,15 +670,15 @@ const ItemCard = ({ item, isFavorite, onToggleFavorite }) => {
 
   return (
     <div className="overflow-hidden transition-all duration-300 bg-white shadow-sm rounded-xl hover:shadow-lg group">
-      <div className="relative bg-gray-100">
+      <div className="relative flex items-center justify-center p-2 overflow-hidden bg-gray-100 h-44 md:h-48">
         {item.images && item.images.length > 0 ? (
           <img
             src={item.images[0].url}
             alt={item.name}
-            className="object-cover w-full h-44 md:h-48 transition-transform duration-500 group-hover:scale-110"
+            className="object-contain max-w-full max-h-full transition-transform duration-500 ease-out group-hover:scale-110"
           />
         ) : (
-          <div className="flex items-center justify-center w-full h-44 md:h-48 text-gray-300 bg-gray-100">
+          <div className="flex items-center justify-center w-full h-full text-gray-300 bg-gray-100">
             <Grid3x3GapFill size={48} />
           </div>
         )}

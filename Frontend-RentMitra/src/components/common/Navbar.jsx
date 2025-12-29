@@ -29,6 +29,21 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
 
+  const avatarSrc = (() => {
+    const direct = user?.avatarUrl || user?.profileImage?.url;
+    if (direct) return direct;
+    const raw = user?.imageUrls;
+    if (typeof raw === 'string') {
+      const first = raw.split(',')[0]?.trim();
+      return first || undefined;
+    }
+    if (Array.isArray(raw)) {
+      const first = raw[0] == null ? '' : String(raw[0]).trim();
+      return first || undefined;
+    }
+    return undefined;
+  })();
+
   const isForgotPasswordRoute = location.pathname === "/forgot-password";
   const isAuthRoute =
     location.pathname === "/login" ||
@@ -369,8 +384,8 @@ const Navbar = () => {
                   onClick={() => setSidebarOpen(true)}
                   className="flex items-center gap-2 px-2 py-2 transition-colors rounded-md lg:px-3 hover:bg-gray-100"
                 >
-                  {user?.avatarUrl ? (
-                    <Avatar src={user.avatarUrl} alt={user?.name} sx={{ width: 28, height: 28 }} />
+                  {avatarSrc ? (
+                    <Avatar src={avatarSrc} alt={user?.name} sx={{ width: 28, height: 28 }} />
                   ) : (
                     <Avatar sx={{ width: 28, height: 28, bgcolor: '#6B7280', fontSize: '14px' }}>
                       {user?.name?.[0] || <Person />}
@@ -392,7 +407,7 @@ const Navbar = () => {
             {!isForgotPasswordRoute && (
               <button
                 onClick={() => navigate("/become-a-renter")}
-                className={`flex items-center gap-1 px-4 py-2 text-sm font-bold text-white transition-colors bg-gray-900 rounded-full shadow-md lg:gap-2 lg:px-6 hover:bg-gray-800 hover:shadow-lg ${isActiveRoute("/add-item") ? "shadow-[0_0_22px_rgba(59,130,246,0.35)] ring-2 ring-blue-300" : ""}`}
+                className={`flex items-center gap-1 px-3 py-2 text-sm font-bold text-white transition-colors bg-gray-900 rounded-full shadow-md lg:gap-1.5 lg:px-4 hover:bg-gray-800 hover:shadow-lg ${isActiveRoute("/add-item") ? "shadow-[0_0_22px_rgba(59,130,246,0.35)] ring-2 ring-blue-300" : ""}`}
               >
                 <Add className="w-4 h-4" />
                 <span className="hidden sm:block">Become a Renter</span>
