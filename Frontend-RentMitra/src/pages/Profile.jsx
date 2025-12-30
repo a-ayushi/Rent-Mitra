@@ -292,33 +292,22 @@ const Profile = () => {
     setInfoError('');
     setInfoSuccess('');
     try {
-      const prevPhone10 = normalizePhone10(user?.mobilenumber || user?.phone || requestedPhone);
-      const nextPhone10 = normalizePhone10(editPhone);
       await userService.upsertUserWithImage(
         getUpsertPayload({
           name: editName,
-          mobile_number: nextPhone10,
           address: editAddress,
         }),
         null
       );
 
       if (typeof refreshUserFromDb === 'function') {
-        await refreshUserFromDb(nextPhone10);
+        const currentPhone10 = normalizePhone10(user?.mobilenumber || user?.phone || requestedPhone);
+        await refreshUserFromDb(currentPhone10);
       }
 
       await refetchProfile();
       setInfoSuccess('Profile updated successfully!');
       setEditingInfo(false);
-
-      if (prevPhone10 && nextPhone10 && prevPhone10 !== nextPhone10) {
-        try {
-          await logout?.();
-        } catch {
-          // ignore
-        }
-        navigate('/login');
-      }
     } catch (e) {
       setInfoError(e?.response?.data?.msg || e?.message || 'Failed to update profile');
     } finally {
@@ -905,8 +894,9 @@ const Profile = () => {
                           <input
                             id="profile-edit-phone"
                             value={editPhone}
-                            onChange={(e) => setEditPhone(e.target.value)}
-                            className="mt-2 w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-300"
+                            readOnly
+                            disabled
+                            className="mt-2 w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-300"
                           />
                         </div>
 

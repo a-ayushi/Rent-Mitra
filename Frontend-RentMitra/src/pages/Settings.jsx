@@ -64,8 +64,9 @@ const ProfileSettings = ({
             type="tel"
             id="phone"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="block w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500"
+            readOnly
+            disabled
+            className="block w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed focus:outline-none focus:ring-gray-500 focus:border-gray-500"
           />
         </div>
       </div>
@@ -308,7 +309,7 @@ const Settings = () => {
   };
 
   const getUpsertPayload = (extra = {}) => {
-    const phone10 = normalizePhone10(phone || getPhoneFromUser(user));
+    const phone10 = normalizePhone10(getPhoneFromUser(user));
 
     const currentUserId =
       user?.user_id ??
@@ -328,7 +329,7 @@ const Settings = () => {
   };
 
   const refreshUser = async () => {
-    const nextPhone = normalizePhone10(phone || getPhoneFromUser(user));
+    const nextPhone = normalizePhone10(getPhoneFromUser(user));
     try {
       if (typeof refreshUserFromDb === 'function') {
         await refreshUserFromDb(nextPhone);
@@ -402,23 +403,12 @@ const Settings = () => {
     setSuccessMsg("");
     setErrorMsg("");
     try {
-      const prevPhone10 = normalizePhone10(getPhoneFromUser(user));
-      const nextPhone10 = normalizePhone10(phone || getPhoneFromUser(user));
       await userService.upsertUserWithImage(
         getUpsertPayload({ address: address || "" }),
         null
       );
       await refreshUser();
       setSuccessMsg("Profile updated successfully!");
-
-      if (prevPhone10 && nextPhone10 && prevPhone10 !== nextPhone10) {
-        try {
-          await logout?.();
-        } catch {
-          // ignore
-        }
-        window.location.href = '/login';
-      }
     } catch {
       setErrorMsg("Failed to update profile.");
     } finally {
