@@ -10,10 +10,7 @@ const userService = {
   upsertUserWithImage: (userPayload, imageFile) => {
     const formData = new FormData();
 
-    formData.append(
-      'data',
-      new Blob([JSON.stringify(userPayload || {})], { type: 'application/json' })
-    );
+    formData.append('data', JSON.stringify(userPayload || {}));
 
     if (imageFile) {
       formData.append('image', imageFile);

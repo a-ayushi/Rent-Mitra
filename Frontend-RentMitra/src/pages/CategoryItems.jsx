@@ -342,11 +342,11 @@ const CategoryItems = () => {
                 </p>
               )}
               <div className="flex items-center gap-3 mt-3">
-                <span className="px-3 py-1.5 text-xs font-medium rounded-full bg-white/20 backdrop-blur-sm">
+                <span className="btn btn-glass btn-sm">
                   <Tags className="inline mr-2" size={16} />
                   {computedTotalItems} items available
                 </span>
-                <span className="px-3 py-1.5 text-xs font-medium rounded-full bg-white/20 backdrop-blur-sm">
+                <span className="btn btn-glass btn-sm">
                   <StarFill className="inline mr-2" size={16} />
                   4.5 avg rating
                 </span>

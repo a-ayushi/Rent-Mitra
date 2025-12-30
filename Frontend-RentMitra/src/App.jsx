@@ -71,6 +71,21 @@ const theme = createTheme({
       "sans-serif",
     ].join(","),
   },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 16,
+          textTransform: 'none',
+          fontWeight: 700,
+          paddingTop: 10,
+          paddingBottom: 10,
+          paddingLeft: 20,
+          paddingRight: 20,
+        },
+      },
+    },
+  },
 });
 
 // Create a client

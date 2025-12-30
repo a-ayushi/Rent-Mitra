@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { Person, Lock, Notifications } from "@mui/icons-material";
+import { Person, Lock, Notifications, PhotoLibrary, PhotoCamera, DeleteOutline } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 import userService from "../services/userService";
 
@@ -223,7 +223,7 @@ const PreferencesSettings = ({
 );
 
 const Settings = () => {
-  const { user, refreshUserFromDb } = useAuth();
+  const { user, refreshUserFromDb, logout } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
 
   const avatarSrc = (() => {
@@ -274,9 +274,11 @@ const Settings = () => {
   const [hydrated, setHydrated] = useState(false);
 
   const [avatarPreviewOpen, setAvatarPreviewOpen] = useState(false);
+  const [avatarActionsOpen, setAvatarActionsOpen] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarError, setAvatarError] = useState("");
   const fileInputRef = React.useRef(null);
+  const cameraInputRef = React.useRef(null);
 
   React.useEffect(() => {
     if (hydrated) return;
@@ -307,8 +309,16 @@ const Settings = () => {
 
   const getUpsertPayload = (extra = {}) => {
     const phone10 = normalizePhone10(phone || getPhoneFromUser(user));
+
+    const currentUserId =
+      user?.user_id ??
+      user?._id ??
+      user?.data?.user_id ??
+      user?.data?._id ??
+      null;
+
     return {
-      user_id: user?.user_id ?? user?._id ?? null,
+      user_id: currentUserId,
       name: name || user?.name || "",
       email: user?.email || "",
       mobile_number: phone10,
@@ -331,6 +341,27 @@ const Settings = () => {
   const onUploadNewClick = () => {
     setAvatarError("");
     fileInputRef.current?.click();
+  };
+
+  const openAvatarActions = () => {
+    setAvatarError('');
+    setAvatarActionsOpen(true);
+  };
+
+  const chooseAvatarFromComputer = () => {
+    setAvatarActionsOpen(false);
+    onUploadNewClick();
+  };
+
+  const captureAvatarPhoto = () => {
+    setAvatarError('');
+    setAvatarActionsOpen(false);
+    cameraInputRef.current?.click();
+  };
+
+  const removeAvatarFromModal = async () => {
+    setAvatarActionsOpen(false);
+    await onDeleteAvatar();
   };
 
   const onAvatarFileSelected = async (e) => {
@@ -371,12 +402,23 @@ const Settings = () => {
     setSuccessMsg("");
     setErrorMsg("");
     try {
+      const prevPhone10 = normalizePhone10(getPhoneFromUser(user));
+      const nextPhone10 = normalizePhone10(phone || getPhoneFromUser(user));
       await userService.upsertUserWithImage(
         getUpsertPayload({ address: address || "" }),
         null
       );
       await refreshUser();
       setSuccessMsg("Profile updated successfully!");
+
+      if (prevPhone10 && nextPhone10 && prevPhone10 !== nextPhone10) {
+        try {
+          await logout?.();
+        } catch {
+          // ignore
+        }
+        window.location.href = '/login';
+      }
     } catch {
       setErrorMsg("Failed to update profile.");
     } finally {
@@ -484,21 +526,21 @@ const Settings = () => {
                         onChange={onAvatarFileSelected}
                         style={{ display: 'none' }}
                       />
+                      <input
+                        ref={cameraInputRef}
+                        type="file"
+                        accept="image/*"
+                        capture="user"
+                        onChange={onAvatarFileSelected}
+                        style={{ display: 'none' }}
+                      />
                       <button
                         type="button"
-                        onClick={onUploadNewClick}
+                        onClick={openAvatarActions}
                         disabled={avatarBusy}
-                        className="px-4 py-2 text-sm font-semibold text-white bg-gray-900 rounded-xl hover:bg-black disabled:opacity-60"
+                        className="btn btn-primary"
                       >
-                        {avatarBusy ? 'Please wait' : 'Upload New'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={onDeleteAvatar}
-                        disabled={avatarBusy}
-                        className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-100 border border-gray-200 rounded-xl hover:bg-gray-200 disabled:opacity-60"
-                      >
-                        Delete avatar
+                        {avatarBusy ? 'Please wait' : 'Edit photo'}
                       </button>
                     </div>
                   </div>
@@ -580,6 +622,119 @@ const Settings = () => {
               <div className="w-full aspect-square overflow-hidden rounded-2xl bg-gray-100 border border-gray-200">
                 <img src={avatarSrc} alt={user?.name || 'User'} className="w-full h-full object-cover" />
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {avatarActionsOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/40 backdrop-blur-sm"
+          onClick={() => setAvatarActionsOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-sm overflow-hidden bg-white border border-gray-100 shadow-xl rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Profile photo"
+          >
+            <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-sky-50 via-indigo-50 to-emerald-50">
+              <div>
+                <div className="text-sm font-bold text-gray-900">Profile photo</div>
+                <div className="mt-0.5 text-xs text-gray-600">Update your photo so people recognize you.</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAvatarActionsOpen(false)}
+                className="inline-flex items-center justify-center w-8 h-8 text-gray-600 transition bg-white border border-gray-200 rounded-xl hover:text-gray-900 hover:bg-gray-50"
+                disabled={avatarBusy}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="px-4 py-3 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 overflow-hidden rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center">
+                  {avatarSrc ? (
+                    <img src={avatarSrc} alt={user?.name || 'User'} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="text-sm font-bold text-gray-700">{(user?.name?.[0] || 'U').toUpperCase()}</div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-gray-900 truncate">{user?.name || 'User'}</div>
+                  <div className="text-xs text-gray-600 truncate">{user?.email || user?.phone || ''}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 space-y-3">
+              <button
+                type="button"
+                onClick={chooseAvatarFromComputer}
+                disabled={avatarBusy}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left rounded-2xl border border-gray-200 hover:bg-gray-50 disabled:opacity-60"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="w-9 h-9 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-700">
+                    <PhotoLibrary fontSize="small" />
+                  </span>
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">Choose from computer</div>
+                    <div className="text-xs text-gray-600">Upload a JPG/PNG image</div>
+                  </div>
+                </div>
+                <div className="text-gray-400">›</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={captureAvatarPhoto}
+                disabled={avatarBusy}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left rounded-2xl border border-gray-200 hover:bg-gray-50 disabled:opacity-60"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="w-9 h-9 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-700">
+                    <PhotoCamera fontSize="small" />
+                  </span>
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">Capture photo</div>
+                    <div className="text-xs text-gray-600">Use your camera</div>
+                  </div>
+                </div>
+                <div className="text-gray-400">›</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={removeAvatarFromModal}
+                disabled={avatarBusy}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left rounded-2xl border border-red-200 hover:bg-red-50 disabled:opacity-60"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="w-9 h-9 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600">
+                    <DeleteOutline fontSize="small" />
+                  </span>
+                  <div>
+                    <div className="text-sm font-semibold text-red-700">Remove photo</div>
+                    <div className="text-xs text-red-600">Use initials instead</div>
+                  </div>
+                </div>
+                <div className="text-red-300">›</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAvatarActionsOpen(false)}
+                disabled={avatarBusy}
+                className="w-full px-4 py-2.5 text-sm font-semibold text-gray-900 bg-gray-100 border border-gray-200 rounded-2xl hover:bg-gray-200 disabled:opacity-60"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

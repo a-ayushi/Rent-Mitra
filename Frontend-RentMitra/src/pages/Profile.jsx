@@ -27,7 +27,7 @@ import { format } from 'date-fns';
 const Profile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, refreshUserFromDb, logout } = useAuth();
   const [tab, setTab] = useState('about');
   const [profileViews, setProfileViews] = useState(0);
   const fileInputRef = useRef(null);
@@ -46,6 +46,14 @@ const Profile = () => {
   const [cropX, setCropX] = useState(50);
   const [cropY, setCropY] = useState(50);
   const [isDraggingCrop, setIsDraggingCrop] = useState(false);
+
+  const [editingInfo, setEditingInfo] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [savingInfo, setSavingInfo] = useState(false);
+  const [infoError, setInfoError] = useState('');
+  const [infoSuccess, setInfoSuccess] = useState('');
   
   const normalizePhone10 = (value) => {
     if (value == null) return '';
@@ -114,7 +122,24 @@ const Profile = () => {
   );
 
   const effectiveProfileData = profileData ?? (isOwnProfile ? { data: currentUser } : null);
-  const userDto = effectiveProfileData?.data ?? effectiveProfileData?.user ?? effectiveProfileData;
+
+  // Normalize response shapes:
+  // - axios response: { data: <body>, status, ... }
+  // - user-service body: { msg, data: <user> }
+  // - AuthContext user may already be <user>
+  const unwrapUserDto = (source) => {
+    if (!source) return null;
+    const body = source?.data != null && source?.status != null ? source.data : source;
+    if (body?.data && (body.data.user_id != null || body.data.mobilenumber != null || body.data.name != null)) {
+      return body.data;
+    }
+    if (body?.user && (body.user.user_id != null || body.user.mobilenumber != null || body.user.name != null)) {
+      return body.user;
+    }
+    return body;
+  };
+
+  const userDto = unwrapUserDto(effectiveProfileData);
 
   const normalizedAddress = (() => {
     const a = userDto?.address;
@@ -222,14 +247,83 @@ const Profile = () => {
     </div>
   );
 
-  const getUpsertPayload = () => {
-    const mobile = normalizePhone10(user?.mobilenumber || user?.phone || requestedPhone);
+  const getUpsertPayload = (extra = {}) => {
+    const currentUserId =
+      userDto?.user_id ??
+      userDto?._id ??
+      currentUser?.user_id ??
+      currentUser?._id ??
+      currentUser?.data?.user_id ??
+      currentUser?.data?._id ??
+      null;
+
+    const mobile = normalizePhone10(
+      extra.mobile_number || extra.mobilenumber || user?.mobilenumber || user?.phone || requestedPhone
+    );
     return {
-      name: user?.name || '',
-      email: user?.email || '',
+      user_id: currentUserId,
+      name: extra.name ?? (user?.name || ''),
+      email: extra.email ?? (user?.email || ''),
       mobile_number: mobile,
-      facebook_id: user?.facebook_id ?? null,
+      facebook_id: extra.facebook_id ?? (user?.facebook_id ?? null),
+      address: extra.address ?? (typeof userDto?.address === 'string' ? userDto.address : ''),
+      remove_image: extra.remove_image,
     };
+  };
+
+  const beginEditInfo = () => {
+    setInfoError('');
+    setInfoSuccess('');
+    setEditName(user?.name || '');
+    setEditPhone(user?.mobilenumber || user?.phone || requestedPhone || '');
+    const addr = userDto?.address;
+    setEditAddress(typeof addr === 'string' ? addr : (user?.address?.street || ''));
+    setEditingInfo(true);
+  };
+
+  const cancelEditInfo = () => {
+    setEditingInfo(false);
+    setInfoError('');
+    setInfoSuccess('');
+  };
+
+  const savePersonalInfo = async () => {
+    setSavingInfo(true);
+    setInfoError('');
+    setInfoSuccess('');
+    try {
+      const prevPhone10 = normalizePhone10(user?.mobilenumber || user?.phone || requestedPhone);
+      const nextPhone10 = normalizePhone10(editPhone);
+      await userService.upsertUserWithImage(
+        getUpsertPayload({
+          name: editName,
+          mobile_number: nextPhone10,
+          address: editAddress,
+        }),
+        null
+      );
+
+      if (typeof refreshUserFromDb === 'function') {
+        await refreshUserFromDb(nextPhone10);
+      }
+
+      await refetchProfile();
+      setInfoSuccess('Profile updated successfully!');
+      setEditingInfo(false);
+
+      if (prevPhone10 && nextPhone10 && prevPhone10 !== nextPhone10) {
+        try {
+          await logout?.();
+        } catch {
+          // ignore
+        }
+        navigate('/login');
+      }
+    } catch (e) {
+      setInfoError(e?.response?.data?.msg || e?.message || 'Failed to update profile');
+    } finally {
+      setSavingInfo(false);
+    }
   };
 
   const stopCamera = () => {
@@ -439,6 +533,9 @@ const Profile = () => {
       const blob = await createCroppedSquareBlob(selectedAvatarUrl, cropZoom, cropX, cropY);
       const croppedFile = new File([blob], selectedAvatarFile.name || 'avatar.jpg', { type: blob.type });
       await userService.upsertUserWithImage(getUpsertPayload(), croppedFile);
+      if (typeof refreshUserFromDb === 'function') {
+        await refreshUserFromDb(normalizePhone10(user?.mobilenumber || user?.phone || requestedPhone));
+      }
       await refetchProfile();
       resetAvatarFlow();
     } finally {
@@ -449,7 +546,10 @@ const Profile = () => {
   const removeAvatar = async () => {
     setUploadingAvatar(true);
     try {
-      await userService.upsertUserWithImage({ ...getUpsertPayload(), remove_image: true }, null);
+      await userService.upsertUserWithImage(getUpsertPayload({ remove_image: true }), null);
+      if (typeof refreshUserFromDb === 'function') {
+        await refreshUserFromDb(normalizePhone10(user?.mobilenumber || user?.phone || requestedPhone));
+      }
       await refetchProfile();
       resetAvatarFlow();
     } finally {
@@ -580,12 +680,12 @@ const Profile = () => {
                   {isOwnProfile ? (
                     <button
                       onClick={() => navigate('/settings')}
-                      className="w-full px-5 py-2.5 text-sm font-semibold text-white transition bg-gray-900 rounded-xl shadow-sm hover:bg-black"
+                      className="btn btn-primary btn-full"
                     >
                       <EditIcon fontSize="small" className="mr-2" />Edit Profile
                     </button>
                   ) : (
-                    <button className="w-full px-5 py-2.5 text-sm font-semibold text-white transition bg-gray-900 rounded-xl shadow-sm hover:bg-black">
+                    <button className="btn btn-primary btn-full">
                       <PhoneIcon fontSize="small" className="mr-2" />Contact
                     </button>
                   )}
@@ -660,7 +760,7 @@ const Profile = () => {
                     {isOwnProfile && (
                       <button
                         onClick={() => navigate('/add-item')}
-                        className="px-4 py-2 text-sm font-semibold text-white bg-gray-900 rounded-xl hover:bg-black"
+                        className="btn btn-primary"
                       >
                         List an Item
                       </button>
@@ -680,7 +780,7 @@ const Profile = () => {
                         {isOwnProfile && (
                           <button
                             onClick={() => navigate('/add-item')}
-                            className="px-6 py-2 font-semibold text-white bg-gray-900 rounded-xl hover:bg-black"
+                            className="btn btn-primary"
                           >
                             List an Item
                           </button>
@@ -716,54 +816,133 @@ const Profile = () => {
                     <div className="mt-1 text-sm text-gray-600">Your profile details</div>
                   </div>
 
-                  <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/40">
-                      <div className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Full name</div>
-                      <div className="mt-1 text-sm font-semibold text-gray-900">{user.name || '—'}</div>
-                    </div>
+                  {!editingInfo ? (
+                    <>
+                      {infoSuccess && <div className="mt-4 text-sm text-green-600">{infoSuccess}</div>}
+                      {infoError && <div className="mt-4 text-sm text-red-600">{infoError}</div>}
 
-                    <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/40">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Email</div>
-                        {user.verification.email && (
-                          <div className="px-2 py-0.5 text-[11px] font-bold text-gray-700 bg-white border border-gray-200 rounded-full">
-                            Verified
+                      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/40">
+                          <div className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Full name</div>
+                          <div className="mt-1 text-sm font-semibold text-gray-900">{user.name || '—'}</div>
+                        </div>
+
+                        <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/40">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Email</div>
+                            {user.verification.email && (
+                              <div className="px-2 py-0.5 text-[11px] font-bold text-gray-700 bg-white border border-gray-200 rounded-full">
+                                Verified
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      <div className="mt-1 text-sm font-semibold text-gray-900 break-words">{user.email || '—'}</div>
-                    </div>
+                          <div className="mt-1 text-sm font-semibold text-gray-900 break-words">{user.email || '—'}</div>
+                        </div>
 
-                    <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/40">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Phone</div>
-                        {user.verification.phone && (
-                          <div className="px-2 py-0.5 text-[11px] font-bold text-gray-700 bg-white border border-gray-200 rounded-full">
-                            Verified
+                        <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/40">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Phone</div>
+                            {user.verification.phone && (
+                              <div className="px-2 py-0.5 text-[11px] font-bold text-gray-700 bg-white border border-gray-200 rounded-full">
+                                Verified
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      <div className="mt-1 text-sm font-semibold text-gray-900">{user.phone || '—'}</div>
-                    </div>
+                          <div className="mt-1 text-sm font-semibold text-gray-900">{user.phone || '—'}</div>
+                        </div>
 
-                    <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/40">
-                      <div className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Address</div>
-                      <div className="mt-1 text-sm font-semibold text-gray-900 break-words">
-                        {user.address?.street
-                          ? `${user.address.street}${user.address?.city ? `, ${user.address.city}` : ''}`
-                          : (user.address?.city ? user.address.city : '—')}
+                        <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/40">
+                          <div className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Address</div>
+                          <div className="mt-1 text-sm font-semibold text-gray-900 break-words">
+                            {typeof userDto?.address === 'string' && userDto.address
+                              ? userDto.address
+                              : (user.address?.street
+                                  ? `${user.address.street}${user.address?.city ? `, ${user.address.city}` : ''}`
+                                  : (user.address?.city ? user.address.city : '—'))}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
 
-                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
-                    <button
-                      onClick={() => navigate('/settings')}
-                      className="px-5 py-2.5 text-sm font-semibold text-white bg-gray-900 rounded-xl hover:bg-black"
-                    >
-                      Edit in Settings
-                    </button>
-                  </div>
+                      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={beginEditInfo}
+                          className="btn btn-primary"
+                        >
+                          Edit Profile
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {infoSuccess && <div className="mt-4 text-sm text-green-600">{infoSuccess}</div>}
+                      {infoError && <div className="mt-4 text-sm text-red-600">{infoError}</div>}
+
+                      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/40">
+                          <label className="text-xs font-semibold tracking-wide text-gray-500 uppercase" htmlFor="profile-edit-name">
+                            Full name
+                          </label>
+                          <input
+                            id="profile-edit-name"
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            className="mt-2 w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-300"
+                          />
+                        </div>
+
+                        <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/40">
+                          <div className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Email</div>
+                          <div className="mt-2 w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-xl text-gray-700 break-words">
+                            {user.email || '—'}
+                          </div>
+                        </div>
+
+                        <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/40">
+                          <label className="text-xs font-semibold tracking-wide text-gray-500 uppercase" htmlFor="profile-edit-phone">
+                            Phone
+                          </label>
+                          <input
+                            id="profile-edit-phone"
+                            value={editPhone}
+                            onChange={(e) => setEditPhone(e.target.value)}
+                            className="mt-2 w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-300"
+                          />
+                        </div>
+
+                        <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/40">
+                          <label className="text-xs font-semibold tracking-wide text-gray-500 uppercase" htmlFor="profile-edit-address">
+                            Address
+                          </label>
+                          <input
+                            id="profile-edit-address"
+                            value={editAddress}
+                            onChange={(e) => setEditAddress(e.target.value)}
+                            className="mt-2 w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-300"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={cancelEditInfo}
+                          disabled={savingInfo}
+                          className="btn btn-secondary"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={savePersonalInfo}
+                          disabled={savingInfo}
+                          className="btn btn-primary"
+                        >
+                          {savingInfo ? 'Saving…' : 'Save'}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </>
               )}
 
