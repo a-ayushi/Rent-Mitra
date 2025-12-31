@@ -4,6 +4,8 @@ import { useQuery } from 'react-query';
 import { useAuth } from '../hooks/useAuth';
 import userService from '../services/userService';
 import itemService from '../services/itemService';
+import api from '../services/api';
+import { useFavorites } from '../contexts/FavoritesContext';
 import ItemCard from '../components/items/ItemCard';
 import ReviewList from '../components/reviews/ReviewList';
 import LoadingScreen from '../components/common/LoadingScreen';
@@ -28,6 +30,7 @@ const Profile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user: currentUser, refreshUserFromDb, logout } = useAuth();
+  const { toggleFavorite, isUpdating: isFavoriteUpdating } = useFavorites();
   const [tab, setTab] = useState('about');
   const [profileViews, setProfileViews] = useState(0);
   const fileInputRef = useRef(null);
@@ -208,6 +211,95 @@ const Profile = () => {
     { enabled: !!requestedPhone, staleTime: 5 * 60 * 1000 }
   );
 
+  const normalizeImageUrls = (imageUrls) => {
+    if (Array.isArray(imageUrls)) {
+      return imageUrls
+        .map((u) => (u == null ? '' : String(u).trim()))
+        .filter(Boolean);
+    }
+    if (typeof imageUrls === 'string') {
+      return imageUrls
+        .split(',')
+        .map((u) => (u == null ? '' : String(u).trim()))
+        .filter(Boolean);
+    }
+    return [];
+  };
+
+  const parseJsonMaybe = (val, fallback) => {
+    if (val == null) return fallback;
+    if (typeof val === 'object') return val;
+    if (typeof val !== 'string') return fallback;
+    try {
+      return JSON.parse(val);
+    } catch {
+      return fallback;
+    }
+  };
+
+  const mapFavoriteToItem = (fav) => {
+    const p = fav?.product || {};
+    const pid = p?.productId ?? p?._id;
+    const urls = normalizeImageUrls(p?.imageUrls);
+    const images = urls.map((url) => ({ url }));
+
+    const rentPrices = parseJsonMaybe(p?.rentPrices, null);
+    const dailyRaw = rentPrices?.daily ?? p?.pricePerDay ?? p?.rentBasedOnType;
+    const daily = typeof dailyRaw === 'number' ? dailyRaw : (dailyRaw == null ? undefined : Number(dailyRaw));
+
+    const location = {
+      ...(p?.location || {}),
+      city: p?.city ?? p?.location?.city,
+      state: p?.state ?? p?.location?.state,
+      country: p?.location?.country,
+    };
+
+    return {
+      ...p,
+      _id: pid,
+      productId: p?.productId,
+      title: p?.title ?? p?.name,
+      name: p?.name ?? p?.title,
+      images,
+      mainImage: images.length > 0 ? images[0].url : p?.mainImage,
+      pricePerDay: Number.isFinite(daily) ? daily : undefined,
+      location,
+      createdAt: fav?.createdAt ?? p?.createdAt,
+    };
+  };
+
+  const {
+    data: favoritesRaw,
+    isLoading: favoritesLoading,
+    isFetching: favoritesFetching,
+    isError: favoritesIsError,
+    error: favoritesErrorObj,
+    refetch: refetchFavorites,
+  } = useQuery(
+    ['profileFavorites'],
+    async () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      if (!token) return [];
+      const res = await api.get('/api/favorites/get-favorite', { timeout: 180000 });
+      return Array.isArray(res) ? res : [];
+    },
+    {
+      enabled: isOwnProfile && tab === 'favorites',
+      retry: 0,
+    }
+  );
+
+  const favoriteItems = React.useMemo(() => {
+    const list = Array.isArray(favoritesRaw) ? favoritesRaw : [];
+    return list.map(mapFavoriteToItem).filter((it) => it?._id != null);
+  }, [favoritesRaw]);
+
+  const [wishlistItems, setWishlistItems] = React.useState([]);
+
+  React.useEffect(() => {
+    setWishlistItems(favoriteItems);
+  }, [favoriteItems]);
+
   const activeListingsCount = Array.isArray(userItems?.items) ? userItems.items.length : 0;
   const listingsLoading = tab === 'listings' && (itemsLoading || itemsFetching);
 
@@ -307,6 +399,11 @@ const Profile = () => {
 
       await refetchProfile();
       setInfoSuccess('Profile updated successfully!');
+
+setTimeout(() => {
+  setInfoSuccess('');
+}, 3000);
+
       setEditingInfo(false);
     } catch (e) {
       setInfoError(e?.response?.data?.msg || e?.message || 'Failed to update profile');
@@ -577,6 +674,17 @@ const Profile = () => {
     );
   };
 
+  const SideNavAction = ({ title, onClick }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold rounded-xl transition text-gray-700 hover:bg-gray-50"
+    >
+      <span>{title}</span>
+      <span className="text-xs text-gray-400">›</span>
+    </button>
+  );
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="container px-4 py-10 mx-auto">
@@ -585,7 +693,7 @@ const Profile = () => {
           <div className="lg:col-span-4 xl:col-span-3">
             <div className="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-2xl lg:sticky lg:top-24">
               <div className="p-6">
-                <div className="flex items-center gap-4">
+                <div className="flex items-start gap-4">
                   <div className="flex-shrink-0">
                     <input
                       ref={fileInputRef}
@@ -642,95 +750,102 @@ const Profile = () => {
                     )}
                   </div>
 
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <div className="text-base font-bold text-gray-900 truncate">{user.name}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold text-gray-600">Hello,</div>
+                        <div className="mt-0.5 text-lg font-bold text-gray-900 truncate">{user.name}</div>
+                        <div className="mt-1 text-sm text-gray-700 truncate">{user.phone || user.email || ''}</div>
+                      </div>
                       {user.verification.identity && <VerifiedIcon className="text-gray-400" />}
                     </div>
-                    <div className="mt-1 text-xs text-gray-600 truncate">
-                      {user.email || user.phone || ''}
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="mt-3 flex flex-wrap gap-2">
                       {!!user.address?.city && (
                         <div className="inline-flex items-center px-2.5 py-1 text-[11px] font-semibold text-gray-700 bg-gray-100 border border-gray-200 rounded-full">
                           <LocationIcon fontSize="inherit" className="mr-1" />
                           {user.address.city}
                         </div>
                       )}
-                      <div className="inline-flex items-center px-2.5 py-1 text-[11px] font-semibold text-gray-700 bg-gray-100 border border-gray-200 rounded-full">
-                        <CalendarIcon fontSize="inherit" className="mr-1" />
-                        Member since {memberSinceText || '—'}
-                      </div>
+                     
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-5">
-                  {isOwnProfile ? (
-                    <button
-                      onClick={() => navigate('/settings')}
-                      className="btn btn-primary btn-full"
-                    >
-                      <EditIcon fontSize="small" className="mr-2" />Edit Profile
-                    </button>
-                  ) : (
+                {!isOwnProfile && (
+                  <div className="mt-5">
                     <button className="btn btn-primary btn-full">
                       <PhoneIcon fontSize="small" className="mr-2" />Contact
                     </button>
-                  )}
-                </div>
-
-                {(user.verification.email || user.verification.phone) && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {user.verification.email && (
-                      <div className="px-2.5 py-1 text-xs font-semibold text-gray-700 bg-gray-100 border border-gray-200 rounded-full">
-                        Email Verified
-                      </div>
-                    )}
-                    {user.verification.phone && (
-                      <div className="px-2.5 py-1 text-xs font-semibold text-gray-700 bg-gray-100 border border-gray-200 rounded-full">
-                        Phone Verified
-                      </div>
-                    )}
                   </div>
                 )}
-              </div>
 
-              <div className="px-6 pb-6">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 border border-gray-100 rounded-xl bg-gray-50/40">
-                    <div className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Listings</div>
-                    <div className="mt-1 text-xl font-bold text-gray-900">{activeListingsCount}</div>
-                  </div>
-                  <div className="p-3 border border-gray-100 rounded-xl bg-gray-50/40">
-                    <div className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Rentals</div>
-                    <div className="mt-1 text-xl font-bold text-gray-900">{stats.totalTransactions || 0}</div>
-                  </div>
-                  <div className="p-3 border border-gray-100 rounded-xl bg-gray-50/40">
-                    <div className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Owner</div>
-                    <div className="mt-1 text-xl font-bold text-gray-900">
-                      {(user?.rating?.asOwner?.count || 0) > 0
-                        ? Number(user?.rating?.asOwner?.average || 0).toFixed(1)
-                        : '—'}
-                    </div>
-                  </div>
-                  <div className="p-3 border border-gray-100 rounded-xl bg-gray-50/40">
-                    <div className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Renter</div>
-                    <div className="mt-1 text-xl font-bold text-gray-900">
-                      {(user?.rating?.asRenter?.count || 0) > 0
-                        ? Number(user?.rating?.asRenter?.average || 0).toFixed(1)
-                        : '—'}
-                    </div>
-                  </div>
-                </div>
+                
               </div>
 
               {/* Tabs */}
               <div className="px-4 pb-6 border-t border-gray-100">
-                <div className="pt-5 space-y-2">
-                  {isOwnProfile && <SideNavButton tabName="about" title="Personal Information" />}
-                  <SideNavButton tabName="listings" title="My Listings" />
-                  <SideNavButton tabName="reviews" title="Reviews" />
+                <div className="pt-5">
+                  <div className="space-y-5">
+                    {isOwnProfile && (
+                      <div>
+                        <div className="px-2 text-xs font-bold tracking-wide text-gray-500 uppercase">My orders</div>
+                        <div className="mt-2 space-y-2">
+                          <SideNavButton tabName="orders" title="My Orders" />
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <div className="px-2 text-xs font-bold tracking-wide text-gray-500 uppercase">Account settings</div>
+                      <div className="mt-2 space-y-2">
+                        {isOwnProfile && <SideNavButton tabName="about" title="Profile Information" />}
+                        {isOwnProfile && (
+                          <SideNavAction
+                            title="Settings"
+                            onClick={() => navigate('/settings')}
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {isOwnProfile && (
+                      <div>
+                        <div className="px-2 text-xs font-bold tracking-wide text-gray-500 uppercase">My stuff</div>
+                        <div className="mt-2 space-y-2">
+                          <SideNavButton tabName="listings" title="My Listing" />
+                          {/* <SideNavButton tabName="rentals" title="Rentals" /> */}
+                          <SideNavButton tabName="reviews" title="My Reviews & Ratings" />
+                          <SideNavButton tabName="favorites" title="My Wishlist" />
+                        </div>
+                      </div>
+                    )}
+
+                    {isOwnProfile && (
+                      <div>
+                        <div className="px-2 text-xs font-bold tracking-wide text-gray-500 uppercase">More</div>
+                        <div className="mt-2 space-y-2">
+                          <SideNavAction title="All Notifications" onClick={() => navigate('/dashboard')} />
+                          <SideNavAction
+                            title="Logout"
+                            onClick={() => {
+                              if (typeof logout === 'function') logout();
+                              navigate('/');
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {!isOwnProfile && (
+                      <div>
+                        <div className="px-2 text-xs font-bold tracking-wide text-gray-500 uppercase">Profile</div>
+                        <div className="mt-2 space-y-2">
+                          <SideNavButton tabName="listings" title="Listings" />
+                          <SideNavButton tabName="reviews" title="Reviews" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -739,6 +854,132 @@ const Profile = () => {
           <div className="lg:col-span-8 xl:col-span-9">
             {/* Tab Content */}
             <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 sm:p-8">
+              {tab === 'orders' && isOwnProfile && (
+                <>
+                  <div>
+                    <div className="text-lg font-bold text-gray-900">My Orders</div>
+                    <div className="mt-1 text-sm text-gray-600">Track your orders and rentals</div>
+                  </div>
+                  <div className="mt-6 p-10 text-center bg-gray-50 border border-gray-100 rounded-2xl">
+                    <div className="text-sm font-semibold text-gray-900">No orders yet</div>
+                    <div className="mt-1 text-sm text-gray-600">Your orders will show up here once you rent something.</div>
+                  </div>
+                </>
+              )}
+
+              {tab === 'rentals' && isOwnProfile && (
+                <>
+                  <div>
+                    <div className="text-lg font-bold text-gray-900">Rentals</div>
+                    <div className="mt-1 text-sm text-gray-600">Items related to your rentals</div>
+                  </div>
+
+                  <div className="mt-6">
+                    {itemsLoading || itemsFetching ? (
+                      <LoadingScreen message="Loading rentals" />
+                    ) : userItems?.items?.length > 0 ? (
+                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        {userItems.items.map((item) => (
+                          <ItemCard item={item} key={item._id} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-12 text-center bg-gray-50 border border-gray-100 rounded-2xl">
+                        <p className="mb-1 text-gray-900 font-semibold">No rentals yet</p>
+                        <p className="text-gray-600">Your rentals will appear here once you start renting.</p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {tab === 'favorites' && isOwnProfile && (
+                <>
+                  <div>
+                    <div className="text-lg font-bold text-gray-900">My Wishlist ({wishlistItems.length})</div>
+                    <div className="mt-1 text-sm text-gray-600">Your favorited items</div>
+                  </div>
+
+                  <div className="mt-6">
+                    {favoritesLoading || favoritesFetching ? (
+                      <LoadingScreen message="Loading wishlist" />
+                    ) : favoritesIsError ? (
+                      <div className="p-12 text-center bg-gray-50 border border-gray-100 rounded-2xl">
+                        <p className="mb-1 text-gray-900 font-semibold">Could not load wishlist</p>
+                        <p className="text-gray-600">{favoritesErrorObj?.message || 'Please try again.'}</p>
+                      </div>
+                    ) : wishlistItems.length > 0 ? (
+                      <div className="bg-white border border-gray-100 shadow-sm rounded-2xl overflow-hidden">
+                        {wishlistItems.map((item, idx) => {
+                          const priceText =
+                            item?.pricePerDay != null && Number.isFinite(Number(item.pricePerDay))
+                              ? `₹${Number(item.pricePerDay)}/day`
+                              : (item?.rentBasedOnType != null ? `₹${item.rentBasedOnType}` : '');
+
+                          return (
+                            <div
+                              key={item._id}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => navigate(`/items/${item._id}`)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') navigate(`/items/${item._id}`);
+                              }}
+                              className={`flex items-start gap-4 p-4 sm:p-5 cursor-pointer hover:bg-gray-50 ${
+                                idx === wishlistItems.length - 1 ? '' : 'border-b border-gray-100'
+                              }`}
+                            >
+                              <div className="w-20 h-20 flex-shrink-0">
+                                <img
+                                  src={item?.mainImage || item?.images?.[0]?.url || ''}
+                                  alt={item?.title || item?.name || 'Item'}
+                                  className="w-20 h-20 object-cover rounded-xl border border-gray-100"
+                                  loading="lazy"
+                                />
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-semibold text-gray-900 truncate">
+                                  {item?.title || item?.name || 'Item'}
+                                </div>
+                                {!!priceText && (
+                                  <div className="mt-2 text-base font-bold text-gray-900">{priceText}</div>
+                                )}
+                                {!!item?.location?.city && (
+                                  <div className="mt-1 text-xs text-gray-600 truncate">{item.location.city}</div>
+                                )}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  const pid = item?.productId ?? item?._id;
+                                  setWishlistItems((prev) => prev.filter((x) => x?._id !== item?._id));
+                                  await toggleFavorite(pid);
+                                  await refetchFavorites();
+                                }}
+                                disabled={isFavoriteUpdating(item?.productId ?? item?._id)}
+                                className="flex items-center justify-center w-10 h-10 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-60"
+                                title="Remove"
+                                aria-label="Remove"
+                              >
+                                <DeleteOutlineIcon fontSize="small" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="p-12 text-center bg-gray-50 border border-gray-100 rounded-2xl">
+                        <p className="mb-1 text-gray-900 font-semibold">No favorites yet</p>
+                        <p className="text-gray-600">Tap the heart on any item to add it to your wishlist.</p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
               {tab === 'listings' && (
                 <>
                   <div className="flex items-center justify-between gap-3">

@@ -342,7 +342,7 @@ const Navbar = () => {
           {/* Right Side Actions */}
           <div className="flex items-center gap-2 lg:gap-3">
             {/* Favourites (hidden on forgot-password) */}
-            {!isForgotPasswordRoute && (
+            {/* {!isForgotPasswordRoute && (
               <button
                 onClick={() => navigate("/favorites")}
                 className={`btn-icon bg-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-700 ${glowClass(isActiveRoute("/favorites"), "red")}`}
@@ -350,9 +350,9 @@ const Navbar = () => {
               >
                 <FavoriteBorder style={{ fontSize: 18 }} />
               </button>
-            )}
+            )} */}
             {/* Chat (hidden on forgot-password) */}
-            {!isForgotPasswordRoute && (
+            {/* {!isForgotPasswordRoute && (
               <button
                 onClick={() => navigate("/messages")}
                 className={`btn-icon bg-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-700 ${glowClass(isActiveRoute("/messages"), "blue")}`}
@@ -360,7 +360,7 @@ const Navbar = () => {
               >
                 <ChatBubbleOutline className="w-5 h-5" />
               </button>
-            )}
+            )} */}  
 
             {/* Login/Profile Section */}
             {isAuthenticated ? (
@@ -384,7 +384,7 @@ const Navbar = () => {
                 
                 {/* Profile */}
                 <button
-                  onClick={() => setSidebarOpen(true)}
+                  onClick={() => navigate("/profile")}
                   className="flex items-center gap-2 h-10 px-2 py-2 transition-colors rounded-md lg:px-3 hover:bg-gray-100"
                 >
                   {avatarSrc ? (
