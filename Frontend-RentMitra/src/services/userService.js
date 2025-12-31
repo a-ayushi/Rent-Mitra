@@ -31,9 +31,7 @@ const userService = {
     return api.put('/users/profile', profileData);
   },
 
-  getFavorites: (params) => {
-    return api.get('/api/favorites/get-favorite', { params });
-  },
+
 
   getReviews: (userId, params) => {
     return api.get(`/users/${userId || ''}/reviews`, { params });

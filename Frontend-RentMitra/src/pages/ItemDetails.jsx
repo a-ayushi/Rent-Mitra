@@ -11,8 +11,6 @@ import {
   ChevronRight,
   Close,
   Visibility,
-  Favorite,
-  FavoriteBorder,
 } from "@mui/icons-material";
 
 const ItemDetails = () => {
@@ -23,7 +21,6 @@ const ItemDetails = () => {
   const [views, setViews] = useState(0);
   const [error, setError] = useState("");
   const { user } = useAuth();
-  const [isFavorited, setIsFavorited] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState("");
   const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -49,7 +46,6 @@ const ItemDetails = () => {
         setSelectedImageUrl(firstUrl);
         setPreviewIndex(0);
         setViews(product.views || 0);
-        setIsFavorited(product.favoritedBy?.includes(user?.id));
         setLoading(false);
       } catch {
         setError("Failed to load item.");
@@ -241,15 +237,6 @@ const ItemDetails = () => {
     return entries;
   })();
 
-  const handleToggleFavorite = async () => {
-    try {
-      await itemService.toggleFavorite(id, isFavorited);
-      setIsFavorited((v) => !v);
-    } catch {
-      // handle error
-    }
-  };
-
   const createdAtText = item?.createdAt
     ? new Date(item.createdAt).toLocaleDateString()
     : null;
@@ -426,13 +413,16 @@ const ItemDetails = () => {
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 mb-6 text-gray-600 hover:text-gray-900"
+          type="button"
         >
-          <ArrowBack /> Back
+          <ArrowBack className="w-5 h-5" />
+          Back
         </button>
-        <div className="max-w-4xl p-8 mx-auto bg-white shadow-xl rounded-2xl">
+
+        <div className="max-w-5xl mx-auto bg-white shadow-lg rounded-2xl p-6">
           <div className="flex flex-col gap-8 md:flex-row">
             <div className="flex-shrink-0 w-full md:w-1/2">
-              <div className="w-full h-80 overflow-hidden bg-gray-100 rounded-2xl md:h-96">
+              <div className="relative w-full h-80 overflow-hidden bg-gray-100 rounded-2xl md:h-96">
                 {selectedImageUrl ? (
                   <img
                     src={selectedImageUrl}
@@ -443,33 +433,43 @@ const ItemDetails = () => {
                     }}
                     className="object-contain w-full h-full cursor-zoom-in"
                   />
-                ) : null}
+                ) : (
+                  <div className="flex items-center justify-center w-full h-full text-gray-400">
+                    No image available
+                  </div>
+                )}
               </div>
-              <div className="flex gap-2 mt-3">
-                {Array.isArray(item.images) &&
-                  item.images.map((img, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setSelectedImageUrl(img.url);
-                        setPreviewIndex(idx);
-                      }}
-                      className={`w-20 h-20 overflow-hidden bg-white border rounded-xl transition-colors ${
-                        img.url === selectedImageUrl
-                          ? "border-gray-800"
-                          : "border-gray-200 hover:border-gray-400"
-                      }`}
-                    >
-                      <img
-                        src={img.url}
-                        alt="thumb"
-                        className="object-contain w-full h-full"
-                      />
-                    </button>
-                  ))}
-              </div>
+
+              {Array.isArray(item?.images) && item.images.length > 1 && (
+                <div className="flex gap-3 mt-4 overflow-x-auto">
+                  {item.images
+                    .map((img) => (img?.url == null ? '' : String(img.url).trim()))
+                    .filter(Boolean)
+                    .map((url, idx) => (
+                      <button
+                        key={url || idx}
+                        type="button"
+                        onClick={() => {
+                          setSelectedImageUrl(url);
+                          setPreviewIndex(idx);
+                        }}
+                        className={`w-20 h-20 overflow-hidden bg-white border rounded-xl transition-colors ${
+                          url === selectedImageUrl
+                            ? "border-gray-800"
+                            : "border-gray-200 hover:border-gray-400"
+                        }`}
+                      >
+                        <img
+                          src={url}
+                          alt="thumb"
+                          className="object-contain w-full h-full"
+                        />
+                      </button>
+                    ))}
+                </div>
+              )}
             </div>
+
             <div className="flex-grow">
               <h1 className="mb-2 text-3xl font-bold">{item.name}</h1>
 
@@ -517,14 +517,6 @@ const ItemDetails = () => {
                       </span>
                     )}
                   </span>
-                )}
-                {user && item.owner && user.id !== item.owner?._id && (
-                  <button
-                    onClick={handleToggleFavorite}
-                    className="ml-2 text-red-500 hover:text-red-700"
-                  >
-                    {isFavorited ? <Favorite /> : <FavoriteBorder />}
-                  </button>
                 )}
               </div>
 

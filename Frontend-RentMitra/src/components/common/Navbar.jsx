@@ -348,7 +348,7 @@ const Navbar = () => {
                 className={`btn-icon bg-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-700 ${glowClass(isActiveRoute("/favorites"), "red")}`}
                 title="Favourites"
               >
-                <FavoriteBorder className="w-5 h-5" />
+                <FavoriteBorder style={{ fontSize: 18 }} />
               </button>
             )}
             {/* Chat (hidden on forgot-password) */}
@@ -544,7 +544,7 @@ const Navbar = () => {
                 }}
                 className={`flex items-center w-full gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md hover:text-red-500 hover:bg-red-50 ${glowClass(isActiveRoute("/favorites"), "red")}`}
               >
-                <FavoriteBorder className="w-4 h-4" />
+                <FavoriteBorder style={{ fontSize: 18 }} />
                 Favourites
               </button>
               {/* Chat - Mobile */}
