@@ -5,8 +5,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Filter,
-  Heart,
-  HeartFill,
   Star,
   StarFill,
   GeoAlt,
@@ -21,12 +19,12 @@ import {
   Lightning,
   Clock,
   Award,
+  Heart,
+  HeartFill,
 } from "react-bootstrap-icons";
-import userService from "../services/userService";
 import itemService from "../services/itemService";
 import categoryService from "../services/categoryService";
-
-import { useQueryClient } from 'react-query';
+import { useFavorites } from "../contexts/FavoritesContext";
 
 const CategoryItems = () => {
   const { id } = useParams();
@@ -41,37 +39,15 @@ const CategoryItems = () => {
   const [sortOrder, setSortOrder] = useState("desc");
   const [showFilters, setShowFilters] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
-  const [favorites, setFavorites] = useState([]);
   const [filters, setFilters] = useState({
     minPrice: "",
     maxPrice: "",
     condition: [],
   });
-
-  const queryClient = useQueryClient();
   const subcategoryCountCacheRef = useRef(new Map());
 
   const selectedType = searchParams.get("type") || "category";
   const selectedSubcategoryName = searchParams.get("name") || "";
-
-  useEffect(() => {
-    async function fetchFavorites() {
-      try {
-        const list = await userService.getFavorites();
-        if (Array.isArray(list)) {
-          const ids = list
-            .map((f) => f?.product?.productId ?? f?.productId ?? f?.id)
-            .filter(Boolean);
-          setFavorites(ids);
-        } else {
-          setFavorites([]);
-        }
-      } catch (err) {
-        console.error('Failed to fetch favorites:', err);
-      }
-    }
-    fetchFavorites();
-  }, []);
 
   const fetchCategoryItems = useCallback(async () => {
     try {
@@ -158,21 +134,6 @@ const CategoryItems = () => {
       fetchSubcategories();
     }
   }, [id, selectedType, selectedSubcategoryName, fetchCategoryItems, fetchSubcategories]);
-
-  const toggleFavorite = async (itemId) => {
-    try {
-      const isCurrentlyFavorited = favorites.includes(itemId);
-      await itemService.toggleFavorite(itemId, isCurrentlyFavorited);
-      setFavorites(prev =>
-        prev.includes(itemId)
-          ? prev.filter(id => id !== itemId)
-          : [...prev, itemId]
-      );
-      queryClient.invalidateQueries('favorites');
-    } catch (err) {
-      console.error('Failed to toggle favorite:', err);
-    }
-  };
 
   const handleSort = (field, order) => {
     setSortBy(field);
@@ -633,8 +594,6 @@ const CategoryItems = () => {
                     <ItemCard
                       key={item._id}
                       item={item}
-                      isFavorite={favorites.includes(item._id)}
-                      onToggleFavorite={toggleFavorite}
                     />
                   ))}
                 </div>
@@ -648,7 +607,12 @@ const CategoryItems = () => {
 };
 
 // Enhanced Item Card Component
-const ItemCard = ({ item, isFavorite, onToggleFavorite }) => {
+const ItemCard = ({ item }) => {
+  const { isFavorite, toggleFavorite, isUpdating } = useFavorites();
+  const productId = item?.productId ?? item?._id;
+  const favorited = isFavorite(productId);
+  const updating = isUpdating(productId);
+
   const getRatingStars = (rating) => {
     const stars = [];
     const fullStars = Math.floor(rating);
@@ -682,17 +646,18 @@ const ItemCard = ({ item, isFavorite, onToggleFavorite }) => {
         )}
 
         <button
+          type="button"
+          aria-label="Favorite"
           onClick={(e) => {
-            e.preventDefault();
-            onToggleFavorite(item._id);
+            e.stopPropagation();
+            toggleFavorite(productId);
           }}
-          className="absolute top-3 right-3 p-2.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110"
+          disabled={updating}
+          className={`absolute top-3 right-3 p-1 bg-transparent rounded-full opacity-80 hover:opacity-100 ${
+            favorited ? 'text-red-500' : 'text-gray-700 hover:text-red-500'
+          } ${updating ? 'pointer-events-none opacity-60' : ''}`}
         >
-          {isFavorite ? (
-            <HeartFill className="text-red-500" size={20} />
-          ) : (
-            <Heart className="text-gray-600" size={20} />
-          )}
+          {favorited ? <HeartFill size={18} /> : <Heart size={18} />}
         </button>
 
         {item.instantBooking && (

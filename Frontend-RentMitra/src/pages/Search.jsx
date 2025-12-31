@@ -4,15 +4,12 @@ import { useQuery } from "react-query";
 import { useDebounce } from "../hooks/useDebounce";
 import itemService from "../services/itemService";
 import ItemCard from "../components/items/ItemCard";
-import MapView from "../components/common/MapView";
 import CategoryFilter from "../components/items/CategoryFilter";
 import LoadingScreen from "../components/common/LoadingScreen";
 import {
   FilterList as FilterIcon,
   Clear as ClearIcon,
   LocationOn as LocationIcon,
-  Map as MapIcon,
-  ViewList as ViewListIcon,
 } from "@mui/icons-material";
 
 const sortOptions = [
@@ -36,7 +33,6 @@ const Search = () => {
 
   const [page, setPage] = useState(1);
   const [drawerOpen, setDrawerOpen] = useState(false); // no longer used visually but kept for potential future use
-  const [mapView, setMapView] = useState(false);
   const debouncedSearch = useDebounce(filters.search, 500);
   const [selectedCategory, setSelectedCategory] = useState(filters.category);
   const [selectedSubcategory, setSelectedSubcategory] = useState(
@@ -194,23 +190,6 @@ const Search = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container px-4 py-8 mx-auto sm:px-6 lg:px-8">
-        <div className="flex justify-end mb-8">
-          <button
-            onClick={() => setMapView(!mapView)}
-            className="flex items-center gap-2 px-4 py-3 text-sm font-semibold text-gray-800 bg-white shadow-lg rounded-full hover:bg-gray-50"
-          >
-            {mapView ? (
-              <>
-                <ViewListIcon /> List View
-              </>
-            ) : (
-              <>
-                <MapIcon /> Map View
-              </>
-            )}
-          </button>
-        </div>
-
         <div className="flex flex-col gap-8">
           {/* Results */}
           <main>
@@ -232,20 +211,11 @@ const Search = () => {
                 {/* <p className="mb-4 text-sm text-gray-600">
                   Found {data?.pagination?.total || 0} items
                 </p> */}
-                {mapView ? (
-                  <div className="h-[600px] rounded-2xl overflow-hidden shadow-lg">
-                    <MapView
-                      items={data?.items || []}
-                      onItemClick={(item) => navigate(`/items/${item._id}`)}
-                    />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {data?.items?.map((item) => (
-                      <ItemCard item={item} key={item._id} />
-                    ))}
-                  </div>
-                )}
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {data?.items?.map((item) => (
+                    <ItemCard item={item} key={item._id} />
+                  ))}
+                </div>
                 <Pagination
                   currentPage={page}
                   totalPages={data?.pagination?.pages || 1}

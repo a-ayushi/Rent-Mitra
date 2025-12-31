@@ -1,58 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from 'react-query';
-import toast from 'react-hot-toast';
-import CircularProgress from '@mui/material/CircularProgress';
 import {
-  Favorite as FavoriteIcon,
   FavoriteBorder as FavoriteBorderIcon,
+  Favorite as FavoriteIcon,
   LocationOn as LocationIcon,
-  Verified as VerifiedIcon,
-  Star as StarIcon
 } from '@mui/icons-material';
-import { useAuth } from '../../hooks/useAuth';
-import itemService from '../../services/itemService';
+import { useFavorites } from '../../contexts/FavoritesContext';
 
-const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = false, onToggleFavorite }) => {
+const ItemCard = ({ item }) => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const queryClient = useQueryClient();
-  const [isFavorited, setIsFavorited] = useState(initialIsFavorited);
+  const { isFavorite, toggleFavorite, isUpdating } = useFavorites();
 
-  useEffect(() => {
-    setIsFavorited(initialIsFavorited);
-  }, [initialIsFavorited]);
-
-  const { mutate: toggleFavorite, isLoading: isTogglingFavorite } = useMutation(
-    (currentlyFavorited) => itemService.toggleFavorite(item._id, currentlyFavorited),
-    {
-      onSuccess: (_data, currentlyFavorited) => {
-        const nextIsFavorited = !currentlyFavorited;
-        setIsFavorited(nextIsFavorited);
-        queryClient.invalidateQueries('favorites');
-        toast.success(nextIsFavorited ? 'Added to favorites' : 'Removed from favorites');
-      },
-      onError: () => {
-        toast.error('Failed to update favorites.');
-      }
-    }
-  );
-
-  const handleFavoriteClick = (e) => {
-    e.stopPropagation();
-    if (!isAuthenticated) {
-      toast.error('Please login to add to favorites.');
-      navigate('/login');
-      return;
-    }
-    // If a custom toggle handler is provided (e.g. from Favorites page), use it
-    if (onToggleFavorite) {
-      onToggleFavorite(item._id);
-      return;
-    }
-    // Fallback to internal mutation for general item lists
-    toggleFavorite(isFavorited);
-  };
+  const productId = item?.productId ?? item?._id;
+  const favorited = isFavorite(productId);
+  const updating = isUpdating(productId);
 
   const handleCardClick = () => {
     navigate(`/items/${item._id}`);
@@ -84,25 +45,31 @@ const ItemCard = ({ item, isFavorited: initialIsFavorited = false, loading = fal
           className="object-contain w-full h-full transition-transform duration-300 group-hover:scale-105"
         />
 
+        <button
+          type="button"
+          aria-label="Favorite"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFavorite(productId);
+          }}
+          disabled={updating}
+          className={`absolute top-3 right-3 p-1 bg-transparent rounded-full opacity-80 hover:opacity-100 ${
+            favorited ? 'text-red-500' : 'text-gray-700 hover:text-red-500'
+          } ${updating ? 'pointer-events-none opacity-60' : ''}`}
+        >
+          {favorited ? (
+            <FavoriteIcon className="w-5 h-5" />
+          ) : (
+            <FavoriteBorderIcon className="w-5 h-5" />
+          )}
+        </button>
+
         {item.featured?.isFeatured && (
           <div className="absolute px-2 py-1 text-xs font-bold text-white bg-red-500 rounded-full top-3 left-3">
             FEATURED
           </div>
         )}
 
-        <button
-          onClick={handleFavoriteClick}
-          disabled={isTogglingFavorite || loading}
-          className="absolute p-2 transition bg-white rounded-full shadow-md top-3 right-3 hover:bg-gray-100"
-        >
-          {isTogglingFavorite || loading ? (
-            <CircularProgress size={20} />
-          ) : isFavorited ? (
-            <FavoriteIcon className="text-red-500" />
-          ) : (
-            <FavoriteBorderIcon className="text-gray-600" />
-          )}
-        </button>
       </div>
 
       <div className="flex flex-col flex-grow px-3.5 pt-2.5 pb-3.5 bg-gray-100">
