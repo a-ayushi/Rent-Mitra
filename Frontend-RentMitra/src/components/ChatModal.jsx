@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import io from 'socket.io-client';
 import axios from 'axios';
 
+const SOCKET_ENABLED = import.meta.env.VITE_ENABLE_SOCKET === 'true';
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:8086';
 
 const ChatModal = ({ open, onClose, chatId, currentUser, otherUser, product, startNewChat }) => {
@@ -11,6 +12,7 @@ const ChatModal = ({ open, onClose, chatId, currentUser, otherUser, product, sta
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
+    if (!SOCKET_ENABLED) return;
     if (!open || !chatId) return;
     const s = io(SOCKET_URL, { withCredentials: true });
     setSocket(s);

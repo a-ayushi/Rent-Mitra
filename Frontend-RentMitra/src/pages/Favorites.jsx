@@ -1,57 +1,54 @@
 import React from 'react';
-import { useQuery, useQueryClient } from 'react-query';
-import { useNavigate } from 'react-router-dom';
-import userService from '../services/userService';
-import itemService from '../services/itemService';
-import ItemCard from '../components/items/ItemCard';
 import { Favorite } from '@mui/icons-material';
+import api from '../services/api';
 
 const Favorites = () => {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { data: favorites, isLoading, error } = useQuery('favorites', () => userService.getFavorites());
-  const [loadingIds, setLoadingIds] = React.useState([]);
+  const didFetchRef = React.useRef(false);
 
-  const favoriteItems = React.useMemo(() => {
-    // NOTE: api.js returns response.data directly, so `favorites` is already the payload
-    const list = favorites;
-    if (!Array.isArray(list)) return [];
-    return list
-      .map((f) => f?.product)
-      .filter(Boolean)
-      .map((p) => ({
-        ...p,
-        _id: p.productId ?? p._id,
-        mainImage: Array.isArray(p.imageUrls) && p.imageUrls.length > 0 ? p.imageUrls[0] : p.mainImage,
-        images: Array.isArray(p.imageUrls) ? p.imageUrls.map((url) => ({ url })) : p.images,
-        pricePerDay: p.rentBasedOnType ?? p.pricePerDay,
-        location: p.address ? { city: p.address } : p.location,
-      }));
-  }, [favorites]);
-
-  // Debug log to see what backend returns
-  console.log('Favorites page backend data:', favorites);
-
-  const handleToggleFavorite = async (itemId) => {
-    setLoadingIds((ids) => [...ids, itemId]);
-    try {
-      await itemService.toggleFavorite(itemId, true);
-      await queryClient.invalidateQueries('favorites');
-      console.log('Invalidated favorites query after toggle');
-    } catch (err) {
-      console.error('Error toggling favorite:', err);
-    } finally {
-      setLoadingIds((ids) => ids.filter(id => id !== itemId));
+  React.useEffect(() => {
+    console.log('Favorites page mounted');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    console.log('Favorites token present:', !!token);
+    if (!token) {
+      console.log('Favorites: no token found, skipping /api/favorites/get-favorite call');
+      return;
     }
-  };
 
-  const SkeletonCard = () => (
-    <div className="p-4 bg-white rounded-lg shadow-md animate-pulse">
-      <div className="w-full h-40 bg-gray-300 rounded-md"></div>
-      <div className="w-3/4 h-6 mt-4 bg-gray-300 rounded"></div>
-      <div className="w-1/2 h-4 mt-2 bg-gray-300 rounded"></div>
-    </div>
-  );
+    // In dev, React StrictMode mounts components twice to detect side effects.
+    // Avoid hitting the API twice.
+    if (didFetchRef.current) return;
+    didFetchRef.current = true;
+
+    const path = '/api/favorites/get-favorite';
+    const baseURL = api?.defaults?.baseURL ?? '';
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const normalizedBaseURL = typeof baseURL === 'string' ? baseURL.replace(/\/$/, '') : baseURL;
+    const callingUrl =
+      normalizedBaseURL === '' || normalizedBaseURL === '/'
+        ? `${origin}${path}`
+        : `${normalizedBaseURL}${path}`;
+    console.log('Favorites: api baseURL:', baseURL);
+    console.log('Favorites: calling', callingUrl);
+    console.time('Favorites get-favorite');
+
+    const warnTimer = setTimeout(() => {
+      console.warn('Favorites: get-favorite is taking longer than 10s (still pending)');
+    }, 10000);
+
+    api
+      .get(path, { timeout: 180000 })
+      .then((res) => {
+        console.log('Favorites API response:', res);
+      })
+      .catch((err) => {
+        console.error('Favorites API error:', err);
+      })
+      .finally(() => {
+        clearTimeout(warnTimer);
+        console.timeEnd('Favorites get-favorite');
+        console.log('Favorites: get-favorite finished');
+      });
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -60,34 +57,10 @@ const Favorites = () => {
           <Favorite className="text-3xl text-red-500" />
           <h1 className="text-4xl font-bold text-gray-900">My Favorites</h1>
         </div>
-
-        {isLoading ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {[...Array(8)].map((_, i) => <SkeletonCard key={i} />)}
-          </div>
-        ) : error ? (
-          <div className="p-12 text-center bg-white shadow-lg rounded-2xl">
-            <p className="text-red-600">Could not load your favorites. Please try again later.</p>
-          </div>
-        ) : favoriteItems.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {favoriteItems.map(item => (
-              <ItemCard
-                item={item}
-                key={item._id}
-                isFavorited={true}
-                onToggleFavorite={handleToggleFavorite}
-                loading={loadingIds.includes(item._id)}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="p-12 text-center bg-white shadow-lg rounded-2xl">
-            <h2 className="mb-4 text-2xl font-bold text-gray-800">Your favorites list is empty</h2>
-            <p className="mb-6 text-gray-600">Browse items and click the heart icon to save them for later.</p>
-            
-          </div>
-        )}
+        <div className="p-12 text-center bg-white shadow-lg rounded-2xl">
+          <h2 className="mb-4 text-2xl font-bold text-gray-800">Favorites</h2>
+          <p className="mb-0 text-gray-600">Open the console to see the API response.</p>
+        </div>
       </div>
     </div>
   );
