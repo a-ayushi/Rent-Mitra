@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import itemService from '../services/itemService';
 import { useAuth } from '../hooks/useAuth';
 import { Edit as EditIcon } from '@mui/icons-material';
+import LoadingScreen from '../components/common/LoadingScreen';
 
 const MyRentals = () => {
   const navigate = useNavigate();
@@ -20,7 +21,11 @@ const MyRentals = () => {
       <div className="container mx-auto py-12 px-4">
         <h1 className="text-4xl font-bold text-gray-900 mb-8">My Rentals</h1>
 
-        {isLoading ? <div>Loading...</div> : error ? <div>Error loading rentals.</div> : (
+        {isLoading ? (
+          <LoadingScreen message="Loading your rentals" />
+        ) : error ? (
+          <div>Error loading rentals.</div>
+        ) : (
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">

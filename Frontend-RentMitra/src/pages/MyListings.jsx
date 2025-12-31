@@ -5,6 +5,7 @@ import itemService from '../services/itemService';
 import { Add, Edit, Delete, Visibility, VisibilityOff } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
+import LoadingScreen from '../components/common/LoadingScreen';
 
 const MyListings = () => {
   const navigate = useNavigate();
@@ -46,12 +47,16 @@ const MyListings = () => {
       <div className="container px-4 py-12 mx-auto">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-4xl font-bold text-gray-900">My Listings</h1>
-          <button onClick={() => navigate('/add-item')} className="flex items-center gap-2 px-6 py-2 font-semibold text-white transition bg-gray-800 rounded-lg shadow-md hover:bg-gray-900">
+          <button onClick={() => navigate('/add-item')} className="btn btn-primary">
             <Add /> Add New Item
           </button>
         </div>
 
-        {isLoading ? <div>Loading...</div> : error ? <div>Error loading listings.</div> : (
+        {isLoading ? (
+          <LoadingScreen message="Loading your listings" />
+        ) : error ? (
+          <div>Error loading listings.</div>
+        ) : (
           <>
             <div className="overflow-hidden bg-white shadow-xl rounded-2xl">
               {Array.isArray(data?.data) && data.data.length > 0 ? (
@@ -117,7 +122,7 @@ const MyListings = () => {
               ) : (
                 <div className="p-12 text-center">
                   <div className="text-gray-600">No listings found.</div>
-                  <button onClick={() => navigate('/add-item')} className="mt-4 px-6 py-2 font-semibold text-white bg-gray-800 rounded-lg">Add a Listing</button>
+                  <button onClick={() => navigate('/add-item')} className="mt-4 btn btn-primary">Add a Listing</button>
                 </div>
               )}
             </div>
@@ -168,7 +173,7 @@ const MyListings = () => {
             ) : (
               <div className="p-12 text-center">
                 <div className="text-gray-600">No listings found.</div>
-                <button onClick={() => navigate('/add-item')} className="mt-4 px-6 py-2 font-semibold text-white bg-gray-800 rounded-lg">Add a Listing</button>
+                <button onClick={() => navigate('/add-item')} className="mt-4 btn btn-primary">Add a Listing</button>
               </div>
             )}
           </div>

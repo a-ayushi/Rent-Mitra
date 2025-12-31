@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import itemService from "../services/itemService";
 import { useAuth } from "../hooks/useAuth";
 import ChatModal from '../components/ChatModal';
+import LoadingScreen from "../components/common/LoadingScreen";
 import axios from 'axios';
 import {
   ArrowBack,
@@ -306,7 +307,7 @@ const ItemDetails = () => {
     { key: "monthly", label: "Monthly", unit: "month", value: rentPrices?.monthly },
   ].filter((o) => o.value != null);
 
-  if (loading) return <div className="p-12 text-center">Loading item...</div>;
+  if (loading) return <LoadingScreen message="Loading item" />;
   if (error || !item)
     return (
       <div className="p-12 text-center text-red-600">
@@ -643,7 +644,14 @@ const ItemDetails = () => {
                   onClick={handleChatWithOwner}
                   disabled={chatLoading}
                 >
-                  {chatLoading ? 'Loading...' : 'Chat with Owner'}
+                  {chatLoading ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 rounded-full border-white/60 border-t-white animate-spin" />
+                      Please wait
+                    </span>
+                  ) : (
+                    'Chat with Owner'
+                  )}
                 </button>
               )}
             </div>

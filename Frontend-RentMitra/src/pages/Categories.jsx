@@ -1,6 +1,7 @@
 // src/components/Categories.js
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import LoadingScreen from '../components/common/LoadingScreen';
 import './Categories.css';
 
 const Categories = () => {
@@ -70,7 +71,7 @@ const Categories = () => {
   if (loading) {
     return (
       <div className="categories-container">
-        <div className="loading">Loading categories...</div>
+        <LoadingScreen message="Loading categories" minHeight="60vh" />
       </div>
     );
   }

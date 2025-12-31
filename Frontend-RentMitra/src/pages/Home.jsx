@@ -26,7 +26,7 @@ const BeautifulRentalHome = () => {
   const [stats, setStats] = useState({
     renters: 0,
     items: 0,
-    rating: 0,
+    rating: null,
     verified: 0,
   });
 
@@ -168,12 +168,31 @@ const BeautifulRentalHome = () => {
       sectionElsRef.current.forEach((el, idx) => {
         if (!el) return;
 
+        // Ensure a deterministic stacking order. Transforms create stacking contexts,
+        // so without explicit z-index, earlier sections can paint over later sections.
+        el.style.position = "relative";
+        el.style.zIndex = String(idx);
+
+        // The 3D transform effect can visually stack sections on top of each other because
+        // transforms do not affect layout. Keep the effect for top sections only.
+        // For lower sections, render normally to avoid overlap artifacts.
+        if (idx >= 3) {
+          el.style.transformStyle = "flat";
+          el.style.willChange = "auto";
+          el.style.backfaceVisibility = "hidden";
+          el.style.webkitBackfaceVisibility = "hidden";
+          el.style.transform = "none";
+          el.style.opacity = "1";
+          el.style.filter = "none";
+          el.style.pointerEvents = "auto";
+          return;
+        }
+
         const rect = el.getBoundingClientRect();
         const mid = rect.top + rect.height / 2 - vh / 2;
         const d = clamp(mid / (vh * 0.85), -1, 1);
 
         const abs = Math.abs(d);
-
         const below = clamp(d, 0, 1);
         const above = clamp(-d, 0, 1);
 
@@ -184,7 +203,7 @@ const BeautifulRentalHome = () => {
         // Keep the hero pinned in place (no translate/rotate). Transforms do not affect layout,
         // so moving the hero creates a visible "gap" above it.
         const zBase = -480;
-        const z = isHero ? 0 : (lerp(zBase, 0, enterT) + lerp(0, 140, above * 0.75));
+        const z = isHero ? 0 : (lerp(zBase, 0, enterT) - lerp(0, 180, above));
         const rotateX = isHero ? 0 : (lerp(10, 0, enterT) - above * 7);
         const y = isHero ? 0 : (lerp(32, 0, enterT) - above * 9);
 
@@ -238,6 +257,7 @@ const BeautifulRentalHome = () => {
     try {
       // Fetch categories
       const categoriesData = await api.get("/api/products/categories");
+
       const mappedCategories = Array.isArray(categoriesData) 
         ? categoriesData.map((cat, idx) => ({
             id: cat.categoryId,
@@ -255,14 +275,38 @@ const BeautifulRentalHome = () => {
         limit: 8,
         city: city === "India" ? "" : city,
       });
-      setFeaturedItems(Array.isArray(itemsData?.items) ? itemsData.items : []);
+      const featured = Array.isArray(itemsData?.items) ? itemsData.items : [];
+      setFeaturedItems(featured);
+
+      const extractRating = (item) => {
+        const candidates = [
+          item?.averageRating,
+          item?.avgRating,
+          item?.rating?.average,
+          item?.rating,
+          item?.stars,
+          item?.starRating,
+        ];
+        for (const c of candidates) {
+          const n = Number(c);
+          if (Number.isFinite(n) && n >= 0 && n <= 5) return n;
+        }
+        return null;
+      };
+
+      const ratings = featured
+        .map(extractRating)
+        .filter((n) => Number.isFinite(n));
+      const avgRating = ratings.length
+        ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10
+        : null;
 
       // You can fetch real stats from API if available
       // For now using placeholder logic
       setStats({
         renters: 50000,
         items: mappedCategories.reduce((sum, cat) => sum + cat.itemCount, 0) || 0,
-        rating: 4.8,
+        rating: avgRating,
         verified: 98,
       });
     } catch (error) {
@@ -345,16 +389,15 @@ const BeautifulRentalHome = () => {
 
   return (
     <div className="bg-white" style={{ perspective: "1200px", perspectiveOrigin: "center center" }}>
-      {/* Hero Section */}
       <section ref={setSectionRef(0)} className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white overflow-hidden">
         <div className="absolute inset-0 bg-grid-white/5"></div>
         <div className="relative container mx-auto px-4 py-6 lg:py-12">
           <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 mb-6 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
+            <div className="badge badge-glass-strong mb-6">
               <TrendingUp className="w-4 h-4 text-green-400" />
               <span className="text-sm font-medium">Join {formatCompact(stats.renters)} happy renters</span>
             </div>
-            
+
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
               Why buy?
               <br />
@@ -362,12 +405,11 @@ const BeautifulRentalHome = () => {
                 Rent and pay for what you use.
               </span>
             </h1>
-            
+
             <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
               Access thousands of items from cameras to power tools. Why buy when you can rent?
             </p>
 
-            {/* Search Bar */}
             <div className="max-w-2xl mx-auto">
               <div className="relative group">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -379,9 +421,9 @@ const BeautifulRentalHome = () => {
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                   className="w-full pl-12 pr-32 py-5 rounded-2xl border-2 border-white/20 bg-white/10 backdrop-blur-md text-white placeholder-gray-400 focus:outline-none focus:border-white/40 transition-all"
                 />
-                <button 
+                <button
                   onClick={handleSearch}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-3 bg-white text-gray-900 rounded-xl font-semibold hover:bg-gray-100 transition-all"
+                  className="btn btn-secondary absolute right-2 top-1/2 transform -translate-y-1/2"
                 >
                   Search
                 </button>
@@ -390,7 +432,6 @@ const BeautifulRentalHome = () => {
           </div>
         </div>
 
-        {/* Stats Bar */}
         <div ref={statsBarRef} className="border-t border-white/10 bg-black/20 backdrop-blur-sm">
           <div className="container mx-auto px-4 py-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -411,7 +452,11 @@ const BeautifulRentalHome = () => {
               <div className="flex items-center gap-3 justify-center">
                 <div className="text-blue-400"><Star /></div>
                 <div>
-                  <div className="text-2xl font-bold">{useCountUp(stats.rating, { durationMs: 900, decimals: 1 }).toFixed(1)}★</div>
+                  <div className="text-2xl font-bold">
+                    {stats.rating == null
+                      ? "Unavailable"
+                      : `${useCountUp(stats.rating, { durationMs: 900, decimals: 1 }).toFixed(1)}★`}
+                  </div>
                   <div className="text-sm text-gray-400">Average Rating</div>
                 </div>
               </div>
@@ -427,7 +472,6 @@ const BeautifulRentalHome = () => {
         </div>
       </section>
 
-
       {/* Categories Section */}
       <section ref={setSectionRef(1)} className="py-12 bg-gray-50">
         <div className="container mx-auto px-4">
@@ -439,7 +483,6 @@ const BeautifulRentalHome = () => {
               Find exactly what you need from our curated categories
             </p>
           </div>
-
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
               {[...Array(8)].map((_, idx) => (
@@ -467,25 +510,24 @@ const BeautifulRentalHome = () => {
       </section>
 
       {/* Featured Rentals */}
-      <section ref={setSectionRef(2)} className="py-16 bg-white">
+      <section ref={setSectionRef(2)} className="pt-10 pb-20 bg-white">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-12">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
                 🔥 Trending Rentals
               </h2>
-              <p className="text-gray-600">Most popular items this week</p>
             </div>
-            <button 
+            <button
               onClick={() => navigate('/search')}
-              className="hidden md:flex items-center gap-2 px-6 py-3 text-gray-900 border-2 border-gray-900 rounded-xl font-semibold hover:bg-gray-900 hover:text-white transition-all"
+              className="hidden md:flex items-center gap-2 px-4 py-2 text-sm text-gray-900 border-2 border-gray-900 rounded-lg font-semibold hover:bg-gray-900 hover:text-white transition-all"
             >
               View All
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {loading ? (
               [...Array(4)].map((_, idx) => <SkeletonCard key={idx} />)
             ) : (
@@ -497,48 +539,48 @@ const BeautifulRentalHome = () => {
                   <div
                     key={item._id}
                     onClick={() => handleItemClick(item._id)}
-                    className="bg-white border-2 border-gray-100 rounded-2xl p-5 hover:border-gray-900 hover:shadow-xl transition-all group cursor-pointer"
+                    className="bg-white border-2 border-gray-100 rounded-2xl p-4 hover:border-gray-900 hover:shadow-xl transition-all group cursor-pointer"
                   >
-                    <div className="relative mb-4">
+                    <div className="relative mb-3">
                       {imageUrl ? (
                         <img
                           src={imageUrl}
                           alt={item.name}
-                          className="w-full h-48 object-cover rounded-xl"
+                          className="w-full h-40 object-cover rounded-xl"
                         />
                       ) : (
-                        <div className="w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center text-7xl">
+                        <div className="w-full h-40 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center text-6xl">
                           📦
                         </div>
                       )}
                     </div>
 
-                    <h3 className="font-bold text-lg text-gray-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
+                    <h3 className="font-bold text-base text-gray-900 mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">
                       {item.name}
                     </h3>
 
                     {item.rating && (
-                      <div className="flex items-center gap-2 mb-3">
+                      <div className="flex items-center gap-2 mb-2">
                         <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                          <span className="font-semibold text-sm">{item.rating}</span>
+                          <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
+                          <span className="font-semibold text-xs">{item.rating}</span>
                         </div>
                         {item.reviewCount && (
-                          <span className="text-gray-400 text-sm">({item.reviewCount})</span>
+                          <span className="text-gray-400 text-xs">({item.reviewCount})</span>
                         )}
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <div className="flex items-center justify-between pt-2.5 border-t border-gray-100">
                       <div>
-                        <div className="text-2xl font-bold text-gray-900">
+                        <div className="text-xl font-bold text-gray-900">
                           {displayPrice ? `₹${displayPrice.value}` : "Contact for price"}
                         </div>
                         {displayPrice && (
-                          <div className="text-xs text-gray-500">per {displayPrice.unit}</div>
+                          <div className="text-[11px] text-gray-500">per {displayPrice.unit}</div>
                         )}
                       </div>
-                      <button className="px-4 py-2 bg-gray-900 text-white rounded-lg font-semibold hover:bg-black transition-all">
+                      <button className="px-3 py-1.5 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-black transition-all">
                         Rent Now
                       </button>
                     </div>
@@ -551,9 +593,9 @@ const BeautifulRentalHome = () => {
       </section>
 
       {/* Benefits Section */}
-      <section ref={setSectionRef(3)} className="py-16 bg-gradient-to-br from-gray-900 to-black text-white">
+      <section ref={setSectionRef(3)} className="pt-14 pb-14 bg-gradient-to-br from-gray-900 to-black text-white">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
+          <div className="text-center mb-8">
             <h2 className="text-3xl md:text-4xl font-bold mb-3">
               Why Rent with Us?
             </h2>
@@ -579,8 +621,10 @@ const BeautifulRentalHome = () => {
         </div>
       </section>
 
+      <div className="h-16 bg-gradient-to-br from-gray-900 to-black"></div>
+
       {/* How It Works */}
-      <section ref={setSectionRef(4)} className="py-16 bg-white">
+      <section ref={setSectionRef(4)} className="pt-24 pb-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
@@ -613,6 +657,7 @@ const BeautifulRentalHome = () => {
           </div>
         </div>
       </section>
+
     </div>
   );
 };

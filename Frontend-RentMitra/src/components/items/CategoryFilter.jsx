@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import categoryService from "../../services/categoryService";
+import LoadingScreen from "../common/LoadingScreen";
 
 const PRIME_CATEGORIES = ["Car", "Dresses", "Jewellery"];
 
@@ -35,7 +36,7 @@ const CategoryFilter = ({
     });
   }, []);
 
-  if (loading) return <div>Loading categories...</div>;
+  if (loading) return <LoadingScreen message="Loading categories" minHeight="140px" size={20} />;
 
   // Defensive: ensure categories is always an array
   const safeCategories = Array.isArray(categories) ? categories : [];
