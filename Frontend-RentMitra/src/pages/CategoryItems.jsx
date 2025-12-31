@@ -19,9 +19,12 @@ import {
   Lightning,
   Clock,
   Award,
+  Heart,
+  HeartFill,
 } from "react-bootstrap-icons";
 import itemService from "../services/itemService";
 import categoryService from "../services/categoryService";
+import { useFavorites } from "../contexts/FavoritesContext";
 
 const CategoryItems = () => {
   const { id } = useParams();
@@ -605,6 +608,11 @@ const CategoryItems = () => {
 
 // Enhanced Item Card Component
 const ItemCard = ({ item }) => {
+  const { isFavorite, toggleFavorite, isUpdating } = useFavorites();
+  const productId = item?.productId ?? item?._id;
+  const favorited = isFavorite(productId);
+  const updating = isUpdating(productId);
+
   const getRatingStars = (rating) => {
     const stars = [];
     const fullStars = Math.floor(rating);
@@ -636,6 +644,21 @@ const ItemCard = ({ item }) => {
             <Grid3x3GapFill size={48} />
           </div>
         )}
+
+        <button
+          type="button"
+          aria-label="Favorite"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFavorite(productId);
+          }}
+          disabled={updating}
+          className={`absolute top-3 right-3 p-1 bg-transparent rounded-full opacity-80 hover:opacity-100 ${
+            favorited ? 'text-red-500' : 'text-gray-700 hover:text-red-500'
+          } ${updating ? 'pointer-events-none opacity-60' : ''}`}
+        >
+          {favorited ? <HeartFill size={18} /> : <Heart size={18} />}
+        </button>
 
         {item.instantBooking && (
           <div className="absolute top-3 left-3 bg-green-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-lg">

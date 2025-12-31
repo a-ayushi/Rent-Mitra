@@ -1,11 +1,19 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  FavoriteBorder as FavoriteBorderIcon,
+  Favorite as FavoriteIcon,
   LocationOn as LocationIcon,
 } from '@mui/icons-material';
+import { useFavorites } from '../../contexts/FavoritesContext';
 
 const ItemCard = ({ item }) => {
   const navigate = useNavigate();
+  const { isFavorite, toggleFavorite, isUpdating } = useFavorites();
+
+  const productId = item?.productId ?? item?._id;
+  const favorited = isFavorite(productId);
+  const updating = isUpdating(productId);
 
   const handleCardClick = () => {
     navigate(`/items/${item._id}`);
@@ -36,6 +44,25 @@ const ItemCard = ({ item }) => {
           alt={item.title || item.name || 'Product'}
           className="object-contain w-full h-full transition-transform duration-300 group-hover:scale-105"
         />
+
+        <button
+          type="button"
+          aria-label="Favorite"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFavorite(productId);
+          }}
+          disabled={updating}
+          className={`absolute top-3 right-3 p-1 bg-transparent rounded-full opacity-80 hover:opacity-100 ${
+            favorited ? 'text-red-500' : 'text-gray-700 hover:text-red-500'
+          } ${updating ? 'pointer-events-none opacity-60' : ''}`}
+        >
+          {favorited ? (
+            <FavoriteIcon className="w-5 h-5" />
+          ) : (
+            <FavoriteBorderIcon className="w-5 h-5" />
+          )}
+        </button>
 
         {item.featured?.isFeatured && (
           <div className="absolute px-2 py-1 text-xs font-bold text-white bg-red-500 rounded-full top-3 left-3">
