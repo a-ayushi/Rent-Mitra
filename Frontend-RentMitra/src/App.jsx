@@ -19,6 +19,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AppProvider } from "./contexts/AppProvider";
 import { CityProvider } from "./contexts/CityContext";
+import { FavoritesProvider } from "./contexts/FavoritesContext";
 
 // Components
 import Navbar from "./components/common/Navbar";
@@ -263,9 +264,11 @@ function App() {
           <Router>
             <AuthProvider>
               <CityProvider>
-                <AppProvider>
-                  <AppContent />
-                </AppProvider>
+                <FavoritesProvider>
+                  <AppProvider>
+                    <AppContent />
+                  </AppProvider>
+                </FavoritesProvider>
               </CityProvider>
             </AuthProvider>
           </Router>
