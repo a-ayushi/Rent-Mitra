@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, ExpandMore } from "@mui/icons-material";
 import { useCity } from '../../hooks/useCity';
+import LoadingScreen from './LoadingScreen';
 
 /**
  * Reusable city dropdown component for selecting a city.
@@ -83,7 +84,9 @@ const CityDropdown = ({
           <div className="p-3 overflow-y-auto max-h-64">
             <div className="px-3 py-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">All Locations</div>
             {loadingCities ? (
-              <div className="px-3 py-2 text-sm text-gray-500">Loading cities...</div>
+              <div className="px-3 py-2">
+                <LoadingScreen message="Loading cities" minHeight="auto" size={18} />
+              </div>
             ) : cityFetchError ? (
               <div className="px-3 py-2 text-sm text-red-500">{cityFetchError}</div>
             ) : (

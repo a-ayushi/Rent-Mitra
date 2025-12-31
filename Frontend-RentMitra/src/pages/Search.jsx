@@ -6,6 +6,7 @@ import itemService from "../services/itemService";
 import ItemCard from "../components/items/ItemCard";
 import MapView from "../components/common/MapView";
 import CategoryFilter from "../components/items/CategoryFilter";
+import LoadingScreen from "../components/common/LoadingScreen";
 import {
   FilterList as FilterIcon,
   Clear as ClearIcon,
@@ -214,9 +215,7 @@ const Search = () => {
           {/* Results */}
           <main>
             {isLoading ? (
-              <div className="p-12 text-center">
-                <span className="text-lg">Loading...</span>
-              </div>
+              <LoadingScreen message="Loading results" />
             ) : error ? (
               <div className="p-4 text-red-700 bg-red-100 rounded-lg">
                 Error loading items.

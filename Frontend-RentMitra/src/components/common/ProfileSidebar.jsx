@@ -6,11 +6,27 @@ export default function ProfileSidebar({ open, onClose, user, onLogout, onNaviga
   // For progress bar (example: 3/6 steps)
   const stepsDone = 3;
   const totalSteps = 6;
+
+  const avatarSrc = (() => {
+    const direct = user?.avatarUrl || user?.profileImage?.url;
+    if (direct) return direct;
+    const raw = user?.imageUrls;
+    if (typeof raw === 'string') {
+      const first = raw.split(',')[0]?.trim();
+      return first || undefined;
+    }
+    if (Array.isArray(raw)) {
+      const first = raw[0] == null ? '' : String(raw[0]).trim();
+      return first || undefined;
+    }
+    return undefined;
+  })();
+
   return (
     <Drawer anchor="left" open={open} onClose={onClose}>
       <Box sx={{ width: 320, p: 2, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
-          <Avatar src={user?.avatarUrl} sx={{ width: 64, height: 64, mb: 1, bgcolor: '#00E1D6', fontSize: 36 }}>
+          <Avatar src={avatarSrc} sx={{ width: 64, height: 64, mb: 1, bgcolor: '#00E1D6', fontSize: 36 }}>
             {user?.name?.[0] || 'A'}
           </Avatar>
           <Box sx={{ fontWeight: 700, fontSize: 22, mb: 1 }}>{user?.name || 'User Name'}</Box>

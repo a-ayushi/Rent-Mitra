@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -71,6 +71,21 @@ const theme = createTheme({
       "sans-serif",
     ].join(","),
   },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 16,
+          textTransform: 'none',
+          fontWeight: 700,
+          paddingTop: 10,
+          paddingBottom: 10,
+          paddingLeft: 20,
+          paddingRight: 20,
+        },
+      },
+    },
+  },
 });
 
 // Create a client
@@ -86,6 +101,10 @@ const queryClient = new QueryClient({
 
 const AppContent = () => {
   const location = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname, location.search]);
 
   const isLoginRoute = location.pathname === "/login";
   const isRegisterRoute = location.pathname === "/register";

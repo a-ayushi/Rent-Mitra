@@ -22,11 +22,27 @@ import {
 import { Avatar } from '@mui/material';
 import ProfileSidebar from './ProfileSidebar';
 import { useCity } from '../../hooks/useCity';
+import LoadingScreen from './LoadingScreen';
 
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+
+  const avatarSrc = (() => {
+    const direct = user?.avatarUrl || user?.profileImage?.url;
+    if (direct) return direct;
+    const raw = user?.imageUrls;
+    if (typeof raw === 'string') {
+      const first = raw.split(',')[0]?.trim();
+      return first || undefined;
+    }
+    if (Array.isArray(raw)) {
+      const first = raw[0] == null ? '' : String(raw[0]).trim();
+      return first || undefined;
+    }
+    return undefined;
+  })();
 
   const isForgotPasswordRoute = location.pathname === "/forgot-password";
   const isAuthRoute =
@@ -216,7 +232,7 @@ const Navbar = () => {
           <div className="relative hidden location-dropdown md:block">
             <button
               onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 min-w-[120px] transition-colors"
+              className="flex items-center gap-2 h-10 px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-100 min-w-[120px] transition-colors"
             >
               <LocationOnOutlined className="w-4 h-4" />
               <span className="truncate max-w-[80px]">{city || "Punjab"}</span>
@@ -266,7 +282,9 @@ const Navbar = () => {
                 <div className="p-3 overflow-y-auto max-h-64">
                   <div className="px-3 py-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">All Locations</div>
                   {loadingCities ? (
-                    <div className="px-3 py-2 text-sm text-gray-500">Loading cities...</div>
+                    <div className="px-3 py-2">
+                      <LoadingScreen message="Loading cities" minHeight="auto" size={18} />
+                    </div>
                   ) : cityFetchError ? (
                     <div className="px-3 py-2 text-sm text-red-500">{cityFetchError}</div>
                   ) : (
@@ -299,20 +317,23 @@ const Navbar = () => {
           </div>
 
           {/* Search Bar with Animated Placeholder */}
-          <form onSubmit={handleSearch} className="flex flex-1 max-w-xl mx-2 lg:mx-4">
+          <form
+            onSubmit={handleSearch}
+            className="flex flex-1 h-10 max-w-xl mx-2 lg:mx-4 rounded-md border border-gray-300 focus-within:border-gray-700 transition-colors"
+          >
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={searchPlaceholders[currentPlaceholderIndex]}
-              className="w-full px-4 py-2 text-sm placeholder-gray-500 transition-all border border-r-0 border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full h-full px-4 py-2 text-sm placeholder-gray-500 transition-all rounded-l-md focus:outline-none"
               style={{
                 animation: search === '' ? 'placeholder-fade 2s ease-in-out infinite' : 'none'
               }}
             />
             <button
               type="submit"
-              className="flex items-center justify-center px-2.5 py-2 text-gray-600 transition-colors bg-transparent border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-50 hover:text-gray-900 lg:px-3"
+              className="flex items-center justify-center h-full px-2.5 py-2 text-gray-600 transition-colors bg-transparent rounded-r-md lg:px-3"
             >
               <Search className="w-3.5 h-3.5" />
             </button>
@@ -324,7 +345,7 @@ const Navbar = () => {
             {!isForgotPasswordRoute && (
               <button
                 onClick={() => navigate("/favorites")}
-                className={`p-2 text-gray-600 transition-colors rounded-md hover:text-red-500 hover:bg-red-50 ${glowClass(isActiveRoute("/favorites"), "red")}`}
+                className={`btn-icon bg-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-700 ${glowClass(isActiveRoute("/favorites"), "red")}`}
                 title="Favourites"
               >
                 <FavoriteBorder className="w-5 h-5" />
@@ -334,7 +355,7 @@ const Navbar = () => {
             {!isForgotPasswordRoute && (
               <button
                 onClick={() => navigate("/messages")}
-                className={`p-2 text-gray-600 transition-colors rounded-md hover:text-blue-500 hover:bg-blue-50 ${glowClass(isActiveRoute("/messages"), "blue")}`}
+                className={`btn-icon bg-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-700 ${glowClass(isActiveRoute("/messages"), "blue")}`}
                 title="Chat"
               >
                 <ChatBubbleOutline className="w-5 h-5" />
@@ -347,7 +368,7 @@ const Navbar = () => {
                 {/* Dashboard link */}
                 <button
                   onClick={() => navigate("/dashboard")}
-                  className={`hidden px-3 py-2 text-sm font-medium text-gray-700 transition-colors rounded-md lg:block hover:text-gray-900 hover:bg-gray-100 ${glowClass(isActiveRoute("/dashboard"), "purple")}`}
+                  className={`hidden items-center h-10 px-2 py-2 text-sm font-medium transition-colors rounded-md lg:px-3 hover:bg-gray-100 lg:inline-flex ${glowClass(isActiveRoute("/dashboard"), "purple")}`}
                 >
                   Dashboard
                 </button>
@@ -355,7 +376,7 @@ const Navbar = () => {
                 {/* Notifications - Desktop */}
                 <button 
                   onClick={() => navigate("/notifications")}
-                  className={`hidden p-2 text-gray-600 transition-colors rounded-md lg:block hover:text-gray-800 hover:bg-gray-100 ${glowClass(isActiveRoute("/notifications"), "blue")}`}
+                  className={`hidden btn-icon bg-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-700 lg:inline-flex ${glowClass(isActiveRoute("/notifications"), "blue")}`}
                   title="Notifications"
                 >
                   <NotificationsNone className="w-5 h-5" />
@@ -364,10 +385,10 @@ const Navbar = () => {
                 {/* Profile */}
                 <button
                   onClick={() => setSidebarOpen(true)}
-                  className="flex items-center gap-2 px-2 py-2 transition-colors rounded-md lg:px-3 hover:bg-gray-100"
+                  className="flex items-center gap-2 h-10 px-2 py-2 transition-colors rounded-md lg:px-3 hover:bg-gray-100"
                 >
-                  {user?.avatarUrl ? (
-                    <Avatar src={user.avatarUrl} alt={user?.name} sx={{ width: 28, height: 28 }} />
+                  {avatarSrc ? (
+                    <Avatar src={avatarSrc} alt={user?.name} sx={{ width: 28, height: 28 }} />
                   ) : (
                     <Avatar sx={{ width: 28, height: 28, bgcolor: '#6B7280', fontSize: '14px' }}>
                       {user?.name?.[0] || <Person />}
@@ -379,7 +400,7 @@ const Navbar = () => {
             ) : (
               <button
                 onClick={() => navigate("/login")}
-                className={`px-3 py-2 text-sm font-medium text-gray-700 transition-colors rounded-md lg:px-4 hover:text-gray-900 hover:bg-gray-100 ${glowClass(isActiveRoute("/login"), "blue")}`}
+                className={`btn btn-secondary h-10 ${glowClass(isActiveRoute("/login"), "blue")}`}
               >
                 Login
               </button>
@@ -389,7 +410,7 @@ const Navbar = () => {
             {!isForgotPasswordRoute && (
               <button
                 onClick={() => navigate("/become-a-renter")}
-                className={`flex items-center gap-1 px-4 py-2 text-sm font-bold text-white transition-colors bg-gray-900 rounded-full shadow-md lg:gap-2 lg:px-6 hover:bg-gray-800 hover:shadow-lg ${isActiveRoute("/add-item") ? "shadow-[0_0_22px_rgba(59,130,246,0.35)] ring-2 ring-blue-300" : ""}`}
+                className={`btn btn-primary h-10 pl-4 pr-5 shadow-md hover:shadow-lg ${isActiveRoute("/add-item") ? "shadow-[0_0_22px_rgba(59,130,246,0.35)] ring-2 ring-blue-300" : ""}`}
               >
                 <Add className="w-4 h-4" />
                 <span className="hidden sm:block">Become a Renter</span>
@@ -399,7 +420,7 @@ const Navbar = () => {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-gray-600 transition-colors rounded-md md:hidden hover:text-gray-900 hover:bg-gray-100"
+              className="btn-icon bg-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-700 md:hidden"
             >
               {mobileMenuOpen ? <Close className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -648,7 +669,7 @@ const Navbar = () => {
             </div>
             <div className="flex-1 p-4 overflow-y-auto" style={{ maxHeight: 350 }}>
               {chatLoading ? (
-                <div className="text-center text-gray-400">Loading...</div>
+                <LoadingScreen message="Loading conversations" minHeight="auto" size={18} />
               ) : userChats.length === 0 ? (
                 <div className="text-center text-gray-400">No conversations yet.</div>
               ) : (

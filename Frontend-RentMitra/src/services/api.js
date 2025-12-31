@@ -9,6 +9,8 @@ const API_URL = (typeof window !== 'undefined' && (envApiUrl === 'http://localho
 const api = axios.create({
   baseURL: API_URL,
 
+  timeout: 60000,
+
   headers: {
     'Content-Type': 'application/json',
   },
@@ -19,7 +21,7 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
 
-    // Do NOT send auth header for public product routes
+    // Do NOT send auth header for public routes
     const url = config.url || '';
     const isPublicProductRoute =
       url.startsWith('/api/products/getAllProducts') ||
@@ -31,7 +33,14 @@ api.interceptors.request.use(
       url.startsWith('/api/products/subcategories') ||
       url.startsWith('/api/products/category-names');
 
-    if (token && !isPublicProductRoute) {
+    const isPublicUserRoute =
+      url.startsWith('/user/register') ||
+      url.startsWith('/user/get-by-phonenumber') ||
+      url.startsWith('/user/get-by-email') ||
+      url.startsWith('/user/find-by-username') ||
+      url.startsWith('/api/client/auth/');
+
+    if (token && !isPublicProductRoute && !isPublicUserRoute) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
