@@ -215,7 +215,7 @@ const Navbar = () => {
       <nav className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
         {/* Main Navbar */}
         <div
-          className={`flex items-center gap-4 px-4 mx-auto lg:px-6 max-w-7xl md:justify-center ${
+          className={`flex items-center justify-start gap-4 px-4 mx-auto lg:px-6 max-w-7xl ${
             isAuthRoute ? 'py-1' : 'py-1.5'
           }`}
         >
@@ -229,7 +229,7 @@ const Navbar = () => {
           </Link>
 
           {/* Location Selector - Desktop */}
-          <div className="relative hidden location-dropdown md:block">
+          <div className="relative hidden location-dropdown md:block ml-auto">
             <button
               onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
               className="flex items-center gap-2 h-8 px-3 py-1 text-sm font-medium text-gray-700 border border-gray-300 rounded-md min-w-[120px] transition-colors"
@@ -316,81 +316,92 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Search + Category shortcuts (Desktop) */}
-          <div className="items-center hidden gap-3 md:flex">
-            <form
-              onSubmit={handleSearch}
-              className="flex h-8 w-[240px] rounded-md border border-gray-300 focus-within:border-gray-700 transition-colors"
+          {/* Search (Desktop) */}
+          <form
+            onSubmit={handleSearch}
+            className="hidden md:flex h-8 w-[340px] lg:w-[420px] rounded-md border border-gray-300 focus-within:border-gray-700 transition-colors"
+          >
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={searchPlaceholders[currentPlaceholderIndex]}
+              className="w-full h-full px-3 py-1 text-sm placeholder-gray-500 transition-all rounded-l-md focus:outline-none"
+              style={{
+                animation: search === '' ? 'placeholder-fade 2s ease-in-out infinite' : 'none'
+              }}
+            />
+            <button
+              type="submit"
+              className="flex items-center justify-center h-full px-2.5 py-2 text-gray-600 transition-colors bg-transparent rounded-r-md"
             >
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={searchPlaceholders[currentPlaceholderIndex]}
-                className="w-full h-full px-3 py-1 text-sm placeholder-gray-500 transition-all rounded-l-md focus:outline-none"
-                style={{
-                  animation: search === '' ? 'placeholder-fade 2s ease-in-out infinite' : 'none'
-                }}
-              />
-              <button
-                type="submit"
-                className="flex items-center justify-center h-full px-2.5 py-2 text-gray-600 transition-colors bg-transparent rounded-r-md"
-              >
-                <Search className="w-3.5 h-3.5" />
-              </button>
-            </form>
+              <Search className="w-3.5 h-3.5" />
+            </button>
+          </form>
 
-            <div
-              className="relative category-dropdown"
-              onMouseEnter={() => setCategoryDropdownOpen(true)}
-              onMouseLeave={() => setCategoryDropdownOpen(false)}
-            >
-              <button className="flex items-center gap-1 h-8 px-4 text-sm font-semibold text-gray-700 transition-colors ">
-                All Categories
-                <ExpandMore className={`w-4 h-4 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {categoryDropdownOpen && (
-                <div
-                  className="absolute right-0 z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl min-w-[600px] lg:min-w-[800px]"
-                >
+          {/* Categories (Desktop) */}
+          <div
+            className="relative hidden md:block category-dropdown"
+            onMouseEnter={() => setCategoryDropdownOpen(true)}
+            onMouseLeave={() => setCategoryDropdownOpen(false)}
+          >
+            <button className="flex items-center gap-1 h-8 px-4 text-sm font-semibold text-gray-700 transition-colors ">
+              All Categories
+              <ExpandMore className={`w-4 h-4 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {categoryDropdownOpen && (
+              <div className="absolute right-0 top-full z-50 pt-2 translate-x-50">
+                <div className="bg-white border border-gray-200 rounded-lg shadow-xl w-max max-w-[90vw] max-h-[70vh] overflow-auto">
                   <div className="p-3 lg:p-5">
-                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-5">
-                      {categories.map((cat) => (
-                        <div key={cat.categoryId || cat._id}>
-                          <h3
-                            className="mb-2 text-sm font-bold text-gray-800 transition-colors cursor-pointer"
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 lg:gap-5">
+                    {categories.map((cat) => (
+                      <div key={cat.categoryId || cat._id}>
+                        <h3
+                          className="mb-1 text-sm font-bold text-gray-800 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setCategoryDropdownOpen(false);
+                            navigate(`/category/${cat.categoryId}`);
+                          }}
+                        >
+                          {cat.name}
+                        </h3>
+                        <ul className="space-y-0.5 max-h-64 overflow-auto pr-1">
+                          {cat.subcategories?.slice(0, 5).map(sub => (
+                            <li key={sub.subcategoryId || sub._id}>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCategoryDropdownOpen(false);
+                                  const name = sub?.name || "";
+                                  const encoded = encodeURIComponent(name);
+                                  navigate(`/category/${cat.categoryId}?type=subcategory&name=${encoded}`);
+                                }}
+                                className="text-xs text-gray-600 transition-colors"
+                              >
+                                {sub.name}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+
+                        {Array.isArray(cat.subcategories) && cat.subcategories.length > 5 && (
+                          <button
                             onClick={() => {
                               setCategoryDropdownOpen(false);
                               navigate(`/category/${cat.categoryId}`);
                             }}
+                            className="mt-1 text-xs font-semibold text-gray-800"
                           >
-                            {cat.name}
-                          </h3>
-                          <ul className="space-y-1 max-h-64 overflow-auto pr-1">
-                            {cat.subcategories?.map(sub => (
-                              <li key={sub.subcategoryId || sub._id}>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setCategoryDropdownOpen(false);
-                                    const name = sub?.name || "";
-                                    const encoded = encodeURIComponent(name);
-                                    navigate(`/category/${cat.categoryId}?type=subcategory&name=${encoded}`);
-                                  }}
-                                  className="text-xs text-gray-600 transition-colors"
-                                >
-                                  {sub.name}
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
+                            View all
+                          </button>
+                        )}
+                      </div>
+                    ))}
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Search Bar (Mobile) */}
@@ -416,83 +427,47 @@ const Navbar = () => {
             </button>
           </form>
 
-          {/* Right Side Actions */}
-          <div className="flex items-center gap-2 lg:gap-3">
-            {/* Favourites (hidden on forgot-password) */}
-            {/* {!isForgotPasswordRoute && (
-              <button
-                onClick={() => navigate("/favorites")}
-                className={`btn-icon bg-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-700 ${glowClass(isActiveRoute("/favorites"), "red")}`}
-                title="Favourites"
-              >
-                <FavoriteBorder style={{ fontSize: 18 }} />
-              </button>
-            )} */}
-            {/* Chat (hidden on forgot-password) */}
-            {/* {!isForgotPasswordRoute && (
-              <button
-                onClick={() => navigate("/messages")}
-                className={`btn-icon bg-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-700 ${glowClass(isActiveRoute("/messages"), "blue")}`}
-                title="Chat"
-              >
-                <ChatBubbleOutline className="w-5 h-5" />
-              </button>
-            )} */}  
-
-            {/* Login/Profile Section */}
-            {isAuthenticated ? (
-              <div className="flex items-center gap-2">
-                {/* Notifications - Desktop */}
-                {/* <button 
-                  onClick={() => navigate("/notifications")}
-                  className={`hidden btn-icon bg-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-700 lg:inline-flex ${glowClass(isActiveRoute("/notifications"), "blue")}`}
-                  title="Notifications"
-                >
-                  <NotificationsNone className="w-5 h-5" />
-                </button> */}
-                
-                {/* Profile */}
-                <button
-                  onClick={() => navigate("/profile")}
-                  className="flex items-center gap-2 h-8 px-2 py-1 transition-colors rounded-md lg:px-3"
-                >
-                  {avatarSrc ? (
-                    <Avatar src={avatarSrc} alt={user?.name} sx={{ width: 28, height: 28 }} />
-                  ) : (
-                    <Avatar sx={{ width: 28, height: 28, bgcolor: '#6B7280', fontSize: '14px' }}>
-                      {user?.name?.[0] || <Person />}
-                    </Avatar>
-                  )}
-                  <span className="hidden text-sm font-medium lg:block">Profile</span>
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => navigate("/login")}
-                className={`btn h-8 bg-gray-100 text-gray-800 border border-gray-200 ${glowClass(isActiveRoute("/login"), "blue")}`}
-              >
-                Login
-              </button>
-            )}
-
-            {/* RENT Button (hidden on forgot-password) */}
-            {!isForgotPasswordRoute && (
-              <button
-                onClick={() => navigate("/become-a-renter")}
-                className={`h-8 px-4 inline-flex items-center bg-transparent text-gray-900 font-semibold transition-colors ${isActiveRoute("/become-a-renter") ? "text-gray-900" : ""}`}
-              >
-                <span className="hidden sm:block">Become a Renter</span>
-              </button>
-            )}
-
-            {/* Mobile Menu Button */}
+          {/* Login/Profile */}
+          {isAuthenticated ? (
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="btn-icon bg-transparent text-gray-700 md:hidden"
+              onClick={() => navigate("/profile")}
+              className="flex items-center gap-2 h-8 px-2 py-1 transition-colors rounded-md lg:px-3"
             >
-              {mobileMenuOpen ? <Close className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {avatarSrc ? (
+                <Avatar src={avatarSrc} alt={user?.name} sx={{ width: 28, height: 28 }} />
+              ) : (
+                <Avatar sx={{ width: 28, height: 28, bgcolor: '#6B7280', fontSize: '14px' }}>
+                  {user?.name?.[0] || <Person />}
+                </Avatar>
+              )}
+              <span className="hidden text-sm font-medium lg:block">Profile</span>
             </button>
-          </div>
+          ) : (
+            <button
+              onClick={() => navigate("/login")}
+              className={`btn h-8 bg-gray-100 text-gray-800 border border-gray-200 ${glowClass(isActiveRoute("/login"), "blue")}`}
+            >
+              Login
+            </button>
+          )}
+
+          {/* RENT Button (hidden on forgot-password) */}
+          {!isForgotPasswordRoute && (
+            <button
+              onClick={() => navigate("/become-a-renter")}
+              className={`h-8 px-4 inline-flex items-center bg-transparent text-gray-900 font-semibold transition-colors ${isActiveRoute("/become-a-renter") ? "text-gray-900" : ""}`}
+            >
+              <span className="hidden sm:block">Become a Renter</span>
+            </button>
+          )}
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="btn-icon bg-transparent text-gray-700 md:hidden"
+          >
+            {mobileMenuOpen ? <Close className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
 
         {/* Mobile Menu */}
