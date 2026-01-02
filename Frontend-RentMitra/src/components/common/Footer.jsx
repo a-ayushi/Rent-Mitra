@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { APP_NAME, APP_NAME_UPPER } from '../../constants/app';
 import {
   Facebook as FacebookIcon,
   Twitter as TwitterIcon,
@@ -57,7 +58,7 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold">RENT MITRA</h2>
+            <h2 className="text-2xl font-bold">{APP_NAME_UPPER}</h2>
             <p className="text-gray-400">
               What's yours, share together. Find and rent anything you need.
             </p>
@@ -83,7 +84,7 @@ const Footer = () => {
         </div>
         <div className="mt-6 border-t border-gray-800 pt-4 text-center">
           <p className="text-base text-gray-400">
-            &copy; {currentYear} Rent Mitra. All rights reserved.
+            &copy; {currentYear} {APP_NAME}. All rights reserved.
           </p>
         </div>
       </div>

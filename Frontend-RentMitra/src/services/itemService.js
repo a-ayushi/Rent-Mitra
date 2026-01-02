@@ -371,7 +371,16 @@ const itemService = {
 
   // Get single item (Java products API)
   getItem: async (id) => {
-    const p = await api.get(`/api/products/get-by-id?productId=${id}`);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const p = await api.get(`/api/products/get-by-id?productId=${id}`,
+      token
+        ? {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        : undefined
+    );
 
     return mapProductToItem(p, id);
   },

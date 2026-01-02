@@ -47,6 +47,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Terms from "./pages/Terms";
 import BecomeRenter from "./pages/BecomeRenter";
+import { APP_NAME } from "./constants/app";
 
 // Create theme
 const theme = createTheme({
@@ -104,6 +105,7 @@ const AppContent = () => {
   const location = useLocation();
 
   useEffect(() => {
+    document.title = APP_NAME;
     window.scrollTo(0, 0);
   }, [location.pathname, location.search]);
 
@@ -236,7 +238,7 @@ const AppContent = () => {
       {isAuthRoute ? (
         <footer className="bg-gray-900 text-white mt-auto">
           <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs sm:text-sm text-gray-400 gap-2">
-            <span>© 2025 Rentra Mitra</span>
+            <span>© 2025 {APP_NAME}</span>
             <div className="flex items-center gap-2 sm:gap-4">
               <Link to="/privacy" className="hover:text-white transition-colors duration-300">
                 Privacy Policy
