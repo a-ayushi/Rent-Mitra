@@ -9,6 +9,7 @@ import {
   AttachMoney,
   Category,
   ChevronRight,
+  ChevronLeft,
   Star,
 } from "@mui/icons-material";
 import api from "../services/api";
@@ -230,15 +231,15 @@ const BeautifulRentalHome = () => {
 
       const categoriesItemsCount = Array.isArray(categoriesData)
         ? categoriesData.reduce((sum, cat) => {
-            const subCount = Array.isArray(cat?.subcategories) ? cat.subcategories.length : 0;
-            return sum + subCount;
-          }, 0)
+          const subCount = Array.isArray(cat?.subcategories) ? cat.subcategories.length : 0;
+          return sum + subCount;
+        }, 0)
         : 0;
 
       // Fetch featured items
       const itemsData = await itemService.getItems({
         featured: true,
-        limit: 8,
+        limit: 10,
         city: city === "India" ? "" : city,
       });
       const featured = Array.isArray(itemsData?.items) ? itemsData.items : [];
@@ -333,6 +334,33 @@ const BeautifulRentalHome = () => {
     return null;
   };
 
+  const scrollContainerRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const checkScroll = () => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      const { scrollLeft, scrollWidth, clientWidth } = container;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [featuredItems]);
+
+  const scroll = (direction) => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      const scrollAmount = direction === "left" ? -300 : 300;
+      container.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    }
+  };
+
   const benefits = [
     { icon: <AttachMoney className="w-8 h-8" />, title: "Save 70% vs Buying", description: "Rent high-quality items at a fraction of the purchase cost" },
     { icon: <Verified className="w-8 h-8" />, title: "Verified Owners", description: "All item owners are identity-verified for your safety" },
@@ -351,7 +379,7 @@ const BeautifulRentalHome = () => {
 
   return (
     <div className="bg-white" style={{ perspective: "1200px", perspectiveOrigin: "center center" }}>
-     
+
       {/* Featured Rentals */}
       <section ref={setSectionRef(1)} className="pt-2 pb-20 bg-white">
         <div className="container mx-auto px-4">
@@ -361,76 +389,117 @@ const BeautifulRentalHome = () => {
                 🔥 Trending
               </h2>
             </div>
-            <button
+            {/* <button
               onClick={() => navigate('/search')}
               className="hidden md:flex items-center gap-2 px-4 py-2 text-sm text-gray-900 border-2 border-gray-900 rounded-lg font-semibold hover:bg-gray-900 hover:text-white transition-all"
             >
               View All
               <ChevronRight className="w-5 h-5" />
-            </button>
+            </button> */}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {loading ? (
-              [...Array(5)].map((_, idx) => <SkeletonCard key={idx} />)
-            ) : (
-              featuredItems.slice(0, 5).map((item) => {
-                const imageUrl = item?.mainImage || item?.images?.[0]?.url;
-                const displayPrice = getDisplayPrice(item);
+          <div className="relative group/section">
+            <button
+              onClick={() => scroll("left")}
+              disabled={!canScrollLeft}
+              className={`absolute left-0 top-1/2 -translate-y-1/2 -ml-4 z-10 bg-white shadow-lg border border-gray-100 rounded-full p-2 hidden md:group-hover/section:flex transition-all items-center justify-center ${!canScrollLeft
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-gray-50 cursor-pointer"
+                }`}
+              aria-label="Scroll left"
+            >
+              <ChevronLeft className={`w-6 h-6 text-gray-900 ${!canScrollLeft ? "text-opacity-50" : ""}`} />
+            </button>
+            <button
+              onClick={() => scroll("right")}
+              disabled={!canScrollRight}
+              className={`absolute right-0 top-1/2 -translate-y-1/2 -mr-4 z-10 bg-white shadow-lg border border-gray-100 rounded-full p-2 hidden md:group-hover/section:flex transition-all items-center justify-center ${!canScrollRight
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-gray-50 cursor-pointer"
+                }`}
+              aria-label="Scroll right"
+            >
+              <ChevronRight className={`w-6 h-6 text-gray-900 ${!canScrollRight ? "text-opacity-50" : ""}`} />
+            </button>
 
-                return (
-                  <div
-                    key={item._id}
-                    onClick={() => handleItemClick(item._id)}
-                    className="bg-white border-2 border-gray-100 rounded-2xl p-4 hover:border-gray-900 hover:shadow-xl transition-all group cursor-pointer"
-                  >
-                    <div className="relative mb-3">
-                      {imageUrl ? (
-                        <img
-                          src={imageUrl}
-                          alt={item.name}
-                          className="w-full h-40 object-cover rounded-xl"
-                        />
-                      ) : (
-                        <div className="w-full h-40 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center text-6xl">
-                          📦
+            <div
+              ref={scrollContainerRef}
+              onScroll={checkScroll}
+              className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide scroll-smooth px-1"
+              style={{
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+              }}
+            >
+              {loading
+                ? [...Array(5)].map((_, idx) => (
+                  <div key={idx} className="min-w-[200px] md:min-w-[240px]">
+                    <SkeletonCard />
+                  </div>
+                ))
+                : featuredItems.map((item) => {
+                  const imageUrl = item?.mainImage || item?.images?.[0]?.url;
+                  const displayPrice = getDisplayPrice(item);
+
+                  return (
+                    <div
+                      key={item._id}
+                      onClick={() => handleItemClick(item._id)}
+                      className="min-w-[200px] md:min-w-[240px] bg-white border-2 border-gray-100 rounded-2xl p-4 hover:border-gray-900 hover:shadow-xl transition-all group/card cursor-pointer"
+                    >
+                      <div className="relative mb-3">
+                        {imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt={item.name}
+                            className="w-full h-40 object-cover rounded-xl"
+                          />
+                        ) : (
+                          <div className="w-full h-40 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center text-6xl">
+                            📦
+                          </div>
+                        )}
+                      </div>
+
+                      <h3 className="font-bold text-base text-gray-900 mb-1 group-hover/card:text-blue-600 transition-colors line-clamp-2">
+                        {item.name}
+                      </h3>
+
+                      {item.rating && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="flex items-center gap-1">
+                            <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
+                            <span className="font-semibold text-xs">{item.rating}</span>
+                          </div>
+                          {item.reviewCount && (
+                            <span className="text-gray-400 text-xs">
+                              ({item.reviewCount})
+                            </span>
+                          )}
                         </div>
                       )}
-                    </div>
 
-                    <h3 className="font-bold text-base text-gray-900 mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">
-                      {item.name}
-                    </h3>
-
-                    {item.rating && (
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="flex items-center gap-1">
-                          <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
-                          <span className="font-semibold text-xs">{item.rating}</span>
+                      <div className="flex items-center justify-between pt-2.5 border-t border-gray-100">
+                        <div>
+                          <div className="text-xl font-bold text-gray-900">
+                            {displayPrice
+                              ? `₹${displayPrice.value}`
+                              : "Contact for price"}
+                          </div>
+                          {displayPrice && (
+                            <div className="text-[11px] text-gray-500">
+                              per {displayPrice.unit}
+                            </div>
+                          )}
                         </div>
-                        {item.reviewCount && (
-                          <span className="text-gray-400 text-xs">({item.reviewCount})</span>
-                        )}
+                        <button className="px-3 py-1.5 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-black transition-all">
+                          Rent Now
+                        </button>
                       </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-2.5 border-t border-gray-100">
-                      <div>
-                        <div className="text-xl font-bold text-gray-900">
-                          {displayPrice ? `₹${displayPrice.value}` : "Contact for price"}
-                        </div>
-                        {displayPrice && (
-                          <div className="text-[11px] text-gray-500">per {displayPrice.unit}</div>
-                        )}
-                      </div>
-                      <button className="px-3 py-1.5 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-black transition-all">
-                        Rent Now
-                      </button>
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })}
+            </div>
           </div>
         </div>
       </section>

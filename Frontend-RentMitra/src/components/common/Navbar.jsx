@@ -91,7 +91,7 @@ const Navbar = () => {
 
 
   const [categories, setCategories] = useState([]);
-  
+
   const [search, setSearch] = useState("");
   const { city, setCity } = useCity();
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
@@ -215,9 +215,8 @@ const Navbar = () => {
       <nav className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
         {/* Main Navbar */}
         <div
-          className={`flex items-center justify-start gap-4 px-4 mx-auto lg:px-6 max-w-7xl ${
-            isAuthRoute ? 'py-1' : 'py-1.5'
-          }`}
+          className={`flex items-center justify-start gap-4 px-4 mx-auto lg:px-6 max-w-7xl ${isAuthRoute ? 'py-1' : 'py-1.5'
+            }`}
         >
           {/* Logo - Larger Size */}
           <Link to="/" className="flex items-center">
@@ -354,49 +353,49 @@ const Navbar = () => {
                 <div className="bg-white border border-gray-200 rounded-lg shadow-xl w-max max-w-[90vw] max-h-[70vh] overflow-auto">
                   <div className="p-3 lg:p-5">
                     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 lg:gap-5">
-                    {categories.map((cat) => (
-                      <div key={cat.categoryId || cat._id}>
-                        <h3
-                          className="mb-1 text-sm font-bold text-gray-800 transition-colors cursor-pointer"
-                          onClick={() => {
-                            setCategoryDropdownOpen(false);
-                            navigate(`/category/${cat.categoryId}`);
-                          }}
-                        >
-                          {cat.name}
-                        </h3>
-                        <ul className="space-y-0.5 max-h-64 overflow-auto pr-1">
-                          {cat.subcategories?.slice(0, 5).map(sub => (
-                            <li key={sub.subcategoryId || sub._id}>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setCategoryDropdownOpen(false);
-                                  const name = sub?.name || "";
-                                  const encoded = encodeURIComponent(name);
-                                  navigate(`/category/${cat.categoryId}?type=subcategory&name=${encoded}`);
-                                }}
-                                className="text-xs text-gray-600 transition-colors"
-                              >
-                                {sub.name}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-
-                        {Array.isArray(cat.subcategories) && cat.subcategories.length > 5 && (
-                          <button
+                      {categories.map((cat) => (
+                        <div key={cat.categoryId || cat._id}>
+                          <h3
+                            className="mb-1 text-sm font-bold text-gray-800 transition-colors cursor-pointer"
                             onClick={() => {
                               setCategoryDropdownOpen(false);
                               navigate(`/category/${cat.categoryId}`);
                             }}
-                            className="mt-1 text-xs font-semibold text-gray-800"
                           >
-                            View all
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                            {cat.name}
+                          </h3>
+                          <ul className="space-y-0.5 max-h-64 overflow-auto pr-1">
+                            {cat.subcategories?.slice(0, 5).map(sub => (
+                              <li key={sub.subcategoryId || sub._id}>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCategoryDropdownOpen(false);
+                                    const name = sub?.name || "";
+                                    const encoded = encodeURIComponent(name);
+                                    navigate(`/category/${cat.categoryId}?type=subcategory&name=${encoded}`);
+                                  }}
+                                  className="text-xs text-gray-600 transition-colors"
+                                >
+                                  {sub.name}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+
+                          {Array.isArray(cat.subcategories) && cat.subcategories.length > 5 && (
+                            <button
+                              onClick={() => {
+                                setCategoryDropdownOpen(false);
+                                navigate(`/category/${cat.categoryId}`);
+                              }}
+                              className="mt-1 text-xs font-semibold text-gray-800"
+                            >
+                              View all
+                            </button>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -445,7 +444,7 @@ const Navbar = () => {
           ) : (
             <button
               onClick={() => navigate("/login")}
-              className={`btn h-8 bg-gray-100 text-gray-800 border border-gray-200 ${glowClass(isActiveRoute("/login"), "blue")}`}
+              className={`btn h-8 text-gray-900 ${glowClass(isActiveRoute("/login"), "blue")}`}
             >
               Login
             </button>
@@ -476,7 +475,7 @@ const Navbar = () => {
             <div className="px-4 py-4 space-y-3">
               {/* Location Selector - Mobile */}
               <div className="location-dropdown">
-                <button 
+                <button
                   onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
                   className="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-700 transition-colors border border-gray-300 rounded-md"
                 >
@@ -486,7 +485,7 @@ const Navbar = () => {
                   </div>
                   <ExpandMore className={`w-4 h-4 transition-transform ${locationDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
-                
+
                 {locationDropdownOpen && (
                   <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-lg">
                     <div className="p-3 overflow-y-auto max-h-48">
@@ -561,7 +560,7 @@ const Navbar = () => {
               {/* Mobile Actions */}
               {isAuthenticated && (
                 <div className="flex gap-3 pt-3 border-t border-gray-200">
-                  <button 
+                  <button
                     onClick={() => {
                       navigate("/messages");
                       setMobileMenuOpen(false);
@@ -571,7 +570,7 @@ const Navbar = () => {
                     <ChatBubbleOutline className="w-4 h-4" />
                     Messages
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       navigate("/notifications");
                       setMobileMenuOpen(false);
@@ -604,7 +603,7 @@ const Navbar = () => {
         }}
         onNavigate={(route) => {
           setSidebarOpen(false);
-          switch(route) {
+          switch (route) {
             case 'profile': navigate('/profile'); break;
             case 'my-ads': navigate('/my-ads'); break;
             case 'buy-packages': navigate('/buy-packages'); break;
@@ -620,7 +619,7 @@ const Navbar = () => {
 
       {/* Overlay for dropdowns */}
       {(locationDropdownOpen || categoryDropdownOpen || mobileMenuOpen) && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-black bg-opacity-20 md:hidden"
           onClick={() => {
             setLocationDropdownOpen(false);
