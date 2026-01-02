@@ -813,9 +813,11 @@ setTimeout(() => {
                         <div className="px-2 text-xs font-bold tracking-wide text-gray-500 uppercase">My stuff</div>
                         <div className="mt-2 space-y-2">
                           <SideNavButton tabName="listings" title="My Listing" />
+                          <SideNavAction title="Dashboard" onClick={() => navigate('/dashboard')} />
                           {/* <SideNavButton tabName="rentals" title="Rentals" /> */}
                           <SideNavButton tabName="reviews" title="My Reviews & Ratings" />
                           <SideNavButton tabName="favorites" title="My Wishlist" />
+                          
                         </div>
                       </div>
                     )}

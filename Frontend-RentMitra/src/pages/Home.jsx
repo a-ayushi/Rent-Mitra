@@ -19,8 +19,6 @@ const BeautifulRentalHome = () => {
   const navigate = useNavigate();
   const { city } = useCity();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [categories, setCategories] = useState([]);
   const [featuredItems, setFeaturedItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -114,34 +112,6 @@ const BeautifulRentalHome = () => {
     return num.toLocaleString();
   };
 
-  const iconMap = {
-    "Electronics": "💻",
-    "Camera & Photo": "📷",
-    "Camera": "📷",
-    "Sports": "⚽",
-    "Tools": "🔧",
-    "Musical": "🎸",
-    "Party": "🎉",
-    "Outdoor": "⛺",
-    "Gaming": "🎮",
-    "Books": "📚",
-    "Furniture": "🛋️",
-    "Appliances": "🏠",
-    "Vehicles": "🚗",
-    "Fashion": "👗",
-  };
-
-  const colorMap = [
-    "bg-blue-50 hover:bg-blue-100",
-    "bg-purple-50 hover:bg-purple-100",
-    "bg-green-50 hover:bg-green-100",
-    "bg-orange-50 hover:bg-orange-100",
-    "bg-pink-50 hover:bg-pink-100",
-    "bg-yellow-50 hover:bg-yellow-100",
-    "bg-teal-50 hover:bg-teal-100",
-    "bg-indigo-50 hover:bg-indigo-100",
-  ];
-
   useEffect(() => {
     fetchData();
   }, [city]);
@@ -176,7 +146,7 @@ const BeautifulRentalHome = () => {
         // The 3D transform effect can visually stack sections on top of each other because
         // transforms do not affect layout. Keep the effect for top sections only.
         // For lower sections, render normally to avoid overlap artifacts.
-        if (idx >= 3) {
+        if (idx >= 2) {
           el.style.transformStyle = "flat";
           el.style.willChange = "auto";
           el.style.backfaceVisibility = "hidden";
@@ -258,16 +228,12 @@ const BeautifulRentalHome = () => {
       // Fetch categories
       const categoriesData = await api.get("/api/products/categories");
 
-      const mappedCategories = Array.isArray(categoriesData) 
-        ? categoriesData.map((cat, idx) => ({
-            id: cat.categoryId,
-            name: cat.name,
-            icon: iconMap[cat.name] || "📦",
-            itemCount: Array.isArray(cat.subcategories) ? cat.subcategories.length : 0,
-            color: colorMap[idx % colorMap.length],
-          }))
-        : [];
-      setCategories(mappedCategories);
+      const categoriesItemsCount = Array.isArray(categoriesData)
+        ? categoriesData.reduce((sum, cat) => {
+            const subCount = Array.isArray(cat?.subcategories) ? cat.subcategories.length : 0;
+            return sum + subCount;
+          }, 0)
+        : 0;
 
       // Fetch featured items
       const itemsData = await itemService.getItems({
@@ -305,7 +271,7 @@ const BeautifulRentalHome = () => {
       // For now using placeholder logic
       setStats({
         renters: 50000,
-        items: mappedCategories.reduce((sum, cat) => sum + cat.itemCount, 0) || 0,
+        items: categoriesItemsCount || 0,
         rating: avgRating,
         verified: 98,
       });
@@ -320,10 +286,6 @@ const BeautifulRentalHome = () => {
     if (searchQuery.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
     }
-  };
-
-  const handleCategoryClick = (categoryId) => {
-    navigate(`/category/${categoryId}`);
   };
 
   const handleItemClick = (itemId) => {
@@ -389,133 +351,14 @@ const BeautifulRentalHome = () => {
 
   return (
     <div className="bg-white" style={{ perspective: "1200px", perspectiveOrigin: "center center" }}>
-      <section ref={setSectionRef(0)} className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white overflow-hidden">
-        <div className="absolute inset-0 bg-grid-white/5"></div>
-        <div className="relative container mx-auto px-4 py-6 lg:py-12">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="badge badge-glass-strong mb-6">
-              <TrendingUp className="w-4 h-4 text-green-400" />
-              <span className="text-sm font-medium">Join {formatCompact(stats.renters)} happy renters</span>
-            </div>
-
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-              Why buy?
-              <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-                Rent and pay for what you use.
-              </span>
-            </h1>
-
-            <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
-              Access thousands of items from cameras to power tools. Why buy when you can rent?
-            </p>
-
-            <div className="max-w-2xl mx-auto">
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="Search for cameras, tools, games, bikes..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  className="w-full pl-12 pr-32 py-5 rounded-2xl border-2 border-white/20 bg-white/10 backdrop-blur-md text-white placeholder-gray-400 focus:outline-none focus:border-white/40 transition-all"
-                />
-                <button
-                  onClick={handleSearch}
-                  className="btn btn-secondary absolute right-2 top-1/2 transform -translate-y-1/2"
-                >
-                  Search
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div ref={statsBarRef} className="border-t border-white/10 bg-black/20 backdrop-blur-sm">
-          <div className="container mx-auto px-4 py-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="flex items-center gap-3 justify-center">
-                <div className="text-blue-400"><TrendingUp /></div>
-                <div>
-                  <div className="text-2xl font-bold">{formatCompact(useCountUp(stats.renters, { durationMs: 1100 }))}</div>
-                  <div className="text-sm text-gray-400">Active Renters</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 justify-center">
-                <div className="text-blue-400"><Category /></div>
-                <div>
-                  <div className="text-2xl font-bold">{useCountUp(stats.items, { durationMs: 900 }).toLocaleString()}</div>
-                  <div className="text-sm text-gray-400">Items Listed</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 justify-center">
-                <div className="text-blue-400"><Star /></div>
-                <div>
-                  <div className="text-2xl font-bold">
-                    {stats.rating == null
-                      ? "Unavailable"
-                      : `${useCountUp(stats.rating, { durationMs: 900, decimals: 1 }).toFixed(1)}★`}
-                  </div>
-                  <div className="text-sm text-gray-400">Average Rating</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 justify-center">
-                <div className="text-blue-400"><Verified /></div>
-                <div>
-                  <div className="text-2xl font-bold">{Math.round(useCountUp(stats.verified, { durationMs: 900 }))}%</div>
-                  <div className="text-sm text-gray-400">Verified Owners</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Categories Section */}
-      <section ref={setSectionRef(1)} className="py-12 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-              Browse by Category
-            </h2>
-            <p className="text-gray-600 text-lg">
-              Find exactly what you need from our curated categories
-            </p>
-          </div>
-          {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
-              {[...Array(8)].map((_, idx) => (
-                <div key={idx} className="bg-gray-200 rounded-2xl h-32 animate-pulse"></div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => handleCategoryClick(cat.id)}
-                  className={`${cat.color} p-6 rounded-2xl border-2 ${
-                    selectedCategory === cat.id ? "border-gray-900" : "border-transparent"
-                  } transition-all transform hover:scale-105 hover:shadow-lg`}
-                >
-                  <div className="text-5xl mb-3">{cat.icon}</div>
-                  <div className="font-bold text-gray-900 mb-1">{cat.name}</div>
-                  <div className="text-sm text-gray-600">{cat.itemCount} items</div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
+     
       {/* Featured Rentals */}
-      <section ref={setSectionRef(2)} className="pt-10 pb-20 bg-white">
+      <section ref={setSectionRef(1)} className="pt-2 pb-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-                🔥 Trending Rentals
+              <h2 className="text-2xl md:text-2xl font-bold text-gray-900">
+                🔥 Trending
               </h2>
             </div>
             <button
@@ -527,11 +370,11 @@ const BeautifulRentalHome = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {loading ? (
-              [...Array(4)].map((_, idx) => <SkeletonCard key={idx} />)
+              [...Array(5)].map((_, idx) => <SkeletonCard key={idx} />)
             ) : (
-              featuredItems.slice(0, 4).map((item) => {
+              featuredItems.slice(0, 5).map((item) => {
                 const imageUrl = item?.mainImage || item?.images?.[0]?.url;
                 const displayPrice = getDisplayPrice(item);
 
@@ -593,7 +436,7 @@ const BeautifulRentalHome = () => {
       </section>
 
       {/* Benefits Section */}
-      <section ref={setSectionRef(3)} className="pt-14 pb-14 bg-gradient-to-br from-gray-900 to-black text-white">
+      <section ref={setSectionRef(2)} className="pt-14 pb-14 bg-gradient-to-br from-gray-900 to-black text-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
             <h2 className="text-3xl md:text-4xl font-bold mb-3">
@@ -624,7 +467,7 @@ const BeautifulRentalHome = () => {
       <div className="h-16 bg-gradient-to-br from-gray-900 to-black"></div>
 
       {/* How It Works */}
-      <section ref={setSectionRef(4)} className="pt-24 pb-16 bg-white">
+      <section ref={setSectionRef(3)} className="pt-24 pb-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
