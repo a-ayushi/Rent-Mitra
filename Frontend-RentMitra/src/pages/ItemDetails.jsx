@@ -4,6 +4,7 @@ import itemService from "../services/itemService";
 import { useAuth } from "../hooks/useAuth";
 import ChatModal from '../components/ChatModal';
 import LoadingScreen from "../components/common/LoadingScreen";
+import MagnifyingGlass from '../components/MagnifyingGlass';
 import axios from 'axios';
 import {
   ArrowBack,
@@ -424,14 +425,12 @@ const ItemDetails = () => {
             <div className="flex-shrink-0 w-full md:w-1/2">
               <div className="relative w-full h-80 overflow-hidden bg-gray-100 rounded-2xl md:h-96">
                 {selectedImageUrl ? (
-                  <img
+                  <MagnifyingGlass
                     src={selectedImageUrl}
                     alt={item.name}
-                    onClick={() => {
-                      setPreviewIndex(selectedIndex);
-                      setIsImagePreviewOpen(true);
-                    }}
-                    className="object-contain w-full h-full cursor-zoom-in"
+                    className="cursor-zoom-in"
+                    zoomLevel={4}
+                    lensSize={120}
                   />
                 ) : (
                   <div className="flex items-center justify-center w-full h-full text-gray-400">
