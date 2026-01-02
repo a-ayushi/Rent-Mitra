@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import categoryService from "../../services/categoryService";
-import logo from "../../assets/RENTMITRALOGO.png";
+import { APP_LOGO, APP_NAME } from "../../constants/app";
 import {
   Favorite,
   FavoriteBorder,
@@ -91,7 +91,7 @@ const Navbar = () => {
 
 
   const [categories, setCategories] = useState([]);
-  
+
   const [search, setSearch] = useState("");
   const { city, setCity } = useCity();
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
@@ -215,24 +215,23 @@ const Navbar = () => {
       <nav className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
         {/* Main Navbar */}
         <div
-          className={`flex items-center justify-between px-4 mx-auto lg:px-6 max-w-7xl ${
-            isAuthRoute ? 'py-2' : 'py-3'
-          }`}
+          className={`flex items-center justify-start gap-4 px-4 mx-auto lg:px-6 max-w-7xl ${isAuthRoute ? 'py-1' : 'py-1.5'
+            }`}
         >
           {/* Logo - Larger Size */}
-          <Link to="/" className="flex items-center mr-4 lg:mr-8">
+          <Link to="/" className="flex items-center">
             <img
-              src={logo}
-              alt="Rent Mitra"
-              className="w-auto h-12 sm:h-14 lg:h-16"
+              src={APP_LOGO}
+              alt={APP_NAME}
+              className="w-auto h-9 sm:h-10 lg:h-12 scale-110 origin-left"
             />
           </Link>
 
           {/* Location Selector - Desktop */}
-          <div className="relative hidden location-dropdown md:block">
+          <div className="relative hidden location-dropdown md:block ml-auto">
             <button
               onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
-              className="flex items-center gap-2 h-10 px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-100 min-w-[120px] transition-colors"
+              className="flex items-center gap-2 h-8 px-3 py-1 text-sm font-medium text-gray-700 border border-gray-300 rounded-md min-w-[120px] transition-colors"
             >
               <LocationOnOutlined className="w-4 h-4" />
               <span className="truncate max-w-[80px]">{city || "Punjab"}</span>
@@ -265,7 +264,7 @@ const Navbar = () => {
                         setLocationDropdownOpen(false);
                         setLocationSearch('');
                       }}
-                      className="flex items-center w-full px-3 py-2 text-left transition-colors rounded-md hover:bg-gray-50"
+                      className="flex items-center w-full px-3 py-2 text-left transition-colors rounded-md"
                     >
                       <div className="flex items-center justify-center w-6 h-6 mr-3 bg-blue-100 rounded-full">
                         <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -302,7 +301,7 @@ const Navbar = () => {
                             setLocationDropdownOpen(false);
                             setLocationSearch('');
                           }}
-                          className="flex items-center w-full px-3 py-2 text-left transition-colors rounded-md hover:bg-gray-50"
+                          className="flex items-center w-full px-3 py-2 text-left transition-colors rounded-md"
                         >
                           <div className="flex items-center justify-center w-6 h-6 mr-3 bg-gray-100 rounded-full">
                             <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
@@ -316,187 +315,159 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Search Bar with Animated Placeholder */}
+          {/* Search (Desktop) */}
           <form
             onSubmit={handleSearch}
-            className="flex flex-1 h-10 max-w-xl mx-2 lg:mx-4 rounded-md border border-gray-300 focus-within:border-gray-700 transition-colors"
+            className="hidden md:flex h-8 w-[340px] lg:w-[420px] rounded-md border border-gray-300 focus-within:border-gray-700 transition-colors"
           >
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={searchPlaceholders[currentPlaceholderIndex]}
-              className="w-full h-full px-4 py-2 text-sm placeholder-gray-500 transition-all rounded-l-md focus:outline-none"
+              className="w-full h-full px-3 py-1 text-sm placeholder-gray-500 transition-all rounded-l-md focus:outline-none"
               style={{
                 animation: search === '' ? 'placeholder-fade 2s ease-in-out infinite' : 'none'
               }}
             />
             <button
               type="submit"
-              className="flex items-center justify-center h-full px-2.5 py-2 text-gray-600 transition-colors bg-transparent rounded-r-md lg:px-3"
+              className="flex items-center justify-center h-full px-2.5 py-2 text-gray-600 transition-colors bg-transparent rounded-r-md"
             >
               <Search className="w-3.5 h-3.5" />
             </button>
           </form>
 
-          {/* Right Side Actions */}
-          <div className="flex items-center gap-2 lg:gap-3">
-            {/* Favourites (hidden on forgot-password) */}
-            {/* {!isForgotPasswordRoute && (
-              <button
-                onClick={() => navigate("/favorites")}
-                className={`btn-icon bg-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-700 ${glowClass(isActiveRoute("/favorites"), "red")}`}
-                title="Favourites"
-              >
-                <FavoriteBorder style={{ fontSize: 18 }} />
-              </button>
-            )} */}
-            {/* Chat (hidden on forgot-password) */}
-            {/* {!isForgotPasswordRoute && (
-              <button
-                onClick={() => navigate("/messages")}
-                className={`btn-icon bg-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-700 ${glowClass(isActiveRoute("/messages"), "blue")}`}
-                title="Chat"
-              >
-                <ChatBubbleOutline className="w-5 h-5" />
-              </button>
-            )} */}  
-
-            {/* Login/Profile Section */}
-            {isAuthenticated ? (
-              <div className="flex items-center gap-2">
-                {/* Dashboard link */}
-                <button
-                  onClick={() => navigate("/dashboard")}
-                  className={`hidden items-center h-10 px-2 py-2 text-sm font-medium transition-colors rounded-md lg:px-3 hover:bg-gray-100 lg:inline-flex ${glowClass(isActiveRoute("/dashboard"), "purple")}`}
-                >
-                  Dashboard
-                </button>
-
-                {/* Notifications - Desktop */}
-                <button 
-                  onClick={() => navigate("/notifications")}
-                  className={`hidden btn-icon bg-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-700 lg:inline-flex ${glowClass(isActiveRoute("/notifications"), "blue")}`}
-                  title="Notifications"
-                >
-                  <NotificationsNone className="w-5 h-5" />
-                </button>
-                
-                {/* Profile */}
-                <button
-                  onClick={() => navigate("/profile")}
-                  className="flex items-center gap-2 h-10 px-2 py-2 transition-colors rounded-md lg:px-3 hover:bg-gray-100"
-                >
-                  {avatarSrc ? (
-                    <Avatar src={avatarSrc} alt={user?.name} sx={{ width: 28, height: 28 }} />
-                  ) : (
-                    <Avatar sx={{ width: 28, height: 28, bgcolor: '#6B7280', fontSize: '14px' }}>
-                      {user?.name?.[0] || <Person />}
-                    </Avatar>
-                  )}
-                  <span className="hidden text-sm font-medium lg:block">Profile</span>
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => navigate("/login")}
-                className={`btn btn-secondary h-10 ${glowClass(isActiveRoute("/login"), "blue")}`}
-              >
-                Login
-              </button>
-            )}
-
-            {/* RENT Button (hidden on forgot-password) */}
-            {!isForgotPasswordRoute && (
-              <button
-                onClick={() => navigate("/become-a-renter")}
-                className={`btn btn-primary h-10 pl-4 pr-5 shadow-md hover:shadow-lg ${isActiveRoute("/add-item") ? "shadow-[0_0_22px_rgba(59,130,246,0.35)] ring-2 ring-blue-300" : ""}`}
-              >
-                <Add className="w-4 h-4" />
-                <span className="hidden sm:block">Become a Renter</span>
-              </button>
-            )}
-
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="btn-icon bg-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-700 md:hidden"
-            >
-              {mobileMenuOpen ? <Close className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          {/* Categories (Desktop) */}
+          <div
+            className="relative hidden md:block category-dropdown"
+            onMouseEnter={() => setCategoryDropdownOpen(true)}
+            onMouseLeave={() => setCategoryDropdownOpen(false)}
+          >
+            <button className="flex items-center gap-1 h-8 px-4 text-sm font-semibold text-gray-700 transition-colors ">
+              All Categories
+              <ExpandMore className={`w-4 h-4 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
-          </div>
-        </div>
+            {categoryDropdownOpen && (
+              <div className="absolute right-0 top-full z-50 pt-2 translate-x-50">
+                <div className="bg-white border border-gray-200 rounded-lg shadow-xl w-max max-w-[90vw] max-h-[70vh] overflow-auto">
+                  <div className="p-3 lg:p-5">
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 lg:gap-5">
+                      {categories.map((cat) => (
+                        <div key={cat.categoryId || cat._id}>
+                          <h3
+                            className="mb-1 text-sm font-bold text-gray-800 transition-colors cursor-pointer"
+                            onClick={() => {
+                              setCategoryDropdownOpen(false);
+                              navigate(`/category/${cat.categoryId}`);
+                            }}
+                          >
+                            {cat.name}
+                          </h3>
+                          <ul className="space-y-0.5 max-h-64 overflow-auto pr-1">
+                            {cat.subcategories?.slice(0, 5).map(sub => (
+                              <li key={sub.subcategoryId || sub._id}>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCategoryDropdownOpen(false);
+                                    const name = sub?.name || "";
+                                    const encoded = encodeURIComponent(name);
+                                    navigate(`/category/${cat.categoryId}?type=subcategory&name=${encoded}`);
+                                  }}
+                                  className="text-xs text-gray-600 transition-colors"
+                                >
+                                  {sub.name}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
 
-        {!isAuthRoute && (
-          <div className="hidden bg-white border-t border-gray-200 md:block">
-            <div className="flex items-center gap-6 px-4 py-3 mx-auto lg:px-6 max-w-7xl">
-              <div 
-                className="relative category-dropdown"
-                onMouseEnter={() => setCategoryDropdownOpen(true)}
-              >
-                <button className="flex items-center gap-1 text-sm font-semibold text-gray-700 transition-colors hover:text-gray-900">
-                  ALL CATEGORIES
-                  <ExpandMore className={`w-4 h-4 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {categoryDropdownOpen && (
-                  <div
-                    className="absolute left-0 z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl min-w-[600px] lg:min-w-[800px]"
-                    onMouseEnter={() => setCategoryDropdownOpen(true)}
-                    onMouseLeave={() => setCategoryDropdownOpen(false)}
-                  >
-                    <div className="p-6 lg:p-8">
-                      <div className="grid grid-cols-2 gap-6 lg:grid-cols-4 lg:gap-8">
-                        {categories.map((cat) => (
-                          <div key={cat.categoryId || cat._id}>
-                            <h3 
-                              className="mb-3 text-sm font-bold text-gray-800 transition-colors cursor-pointer hover:text-gray-900"
+                          {Array.isArray(cat.subcategories) && cat.subcategories.length > 5 && (
+                            <button
                               onClick={() => {
                                 setCategoryDropdownOpen(false);
-                                // Use Java categoryId for navigation so /category/:id is always a valid numeric id
                                 navigate(`/category/${cat.categoryId}`);
                               }}
+                              className="mt-1 text-xs font-semibold text-gray-800"
                             >
-                              {cat.name}
-                            </h3>
-                            <ul className="space-y-2">
-                              {cat.subcategories?.slice(0, 5).map(sub => (
-                                <li key={sub.subcategoryId || sub._id}>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setCategoryDropdownOpen(false);
-                                      const name = sub?.name || "";
-                                      const encoded = encodeURIComponent(name);
-                                      navigate(`/category/${cat.categoryId}?type=subcategory&name=${encoded}`);
-                                    }}
-                                    className="text-xs text-gray-600 transition-colors hover:text-gray-900 hover:underline"
-                                  >
-                                    {sub.name}
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
-                      </div>
+                              View all
+                            </button>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                )}
+                </div>
               </div>
-              <div className="flex gap-4 overflow-x-auto lg:gap-6">
-                {categories.slice(0, 6).map((cat, index) => (
-                  <button
-                    key={cat.categoryId || cat._id || cat.id || `${cat.name || 'cat'}-${index}`}
-                    onClick={() => navigate(`/category/${cat.categoryId}`)}
-                    className="py-1 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900 whitespace-nowrap"
-                  >
-                    {cat.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
-        )}
+
+          {/* Search Bar (Mobile) */}
+          <form
+            onSubmit={handleSearch}
+            className="flex flex-1 h-8 mx-2 rounded-md border border-gray-300 focus-within:border-gray-700 transition-colors md:hidden"
+          >
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={searchPlaceholders[currentPlaceholderIndex]}
+              className="w-full h-full px-4 py-1 text-sm placeholder-gray-500 transition-all rounded-l-md focus:outline-none"
+              style={{
+                animation: search === '' ? 'placeholder-fade 2s ease-in-out infinite' : 'none'
+              }}
+            />
+            <button
+              type="submit"
+              className="flex items-center justify-center h-full px-2.5 py-2 text-gray-600 transition-colors bg-transparent rounded-r-md"
+            >
+              <Search className="w-3.5 h-3.5" />
+            </button>
+          </form>
+
+          {/* Login/Profile */}
+          {isAuthenticated ? (
+            <button
+              onClick={() => navigate("/profile")}
+              className="flex items-center gap-2 h-8 px-2 py-1 transition-colors rounded-md lg:px-3"
+            >
+              {avatarSrc ? (
+                <Avatar src={avatarSrc} alt={user?.name} sx={{ width: 28, height: 28 }} />
+              ) : (
+                <Avatar sx={{ width: 28, height: 28, bgcolor: '#6B7280', fontSize: '14px' }}>
+                  {user?.name?.[0] || <Person />}
+                </Avatar>
+              )}
+              <span className="hidden text-sm font-medium lg:block">Profile</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate("/login")}
+              className={`btn h-8 text-gray-900 ${glowClass(isActiveRoute("/login"), "blue")}`}
+            >
+              Login
+            </button>
+          )}
+
+          {/* RENT Button (hidden on forgot-password) */}
+          {!isForgotPasswordRoute && (
+            <button
+              onClick={() => navigate("/become-a-renter")}
+              className={`h-8 px-4 inline-flex items-center bg-transparent text-gray-900 font-semibold transition-colors ${isActiveRoute("/become-a-renter") ? "text-gray-900" : ""}`}
+            >
+              <span className="hidden sm:block">Become a Renter</span>
+            </button>
+          )}
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="btn-icon bg-transparent text-gray-700 md:hidden"
+          >
+            {mobileMenuOpen ? <Close className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
@@ -504,9 +475,9 @@ const Navbar = () => {
             <div className="px-4 py-4 space-y-3">
               {/* Location Selector - Mobile */}
               <div className="location-dropdown">
-                <button 
+                <button
                   onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
-                  className="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-700 transition-colors border border-gray-300 rounded-md hover:bg-gray-50"
+                  className="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-700 transition-colors border border-gray-300 rounded-md"
                 >
                   <div className="flex items-center gap-2">
                     <LocationOnOutlined className="w-4 h-4" />
@@ -514,7 +485,7 @@ const Navbar = () => {
                   </div>
                   <ExpandMore className={`w-4 h-4 transition-transform ${locationDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
-                
+
                 {locationDropdownOpen && (
                   <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-lg">
                     <div className="p-3 overflow-y-auto max-h-48">
@@ -526,7 +497,7 @@ const Navbar = () => {
                             setLocationDropdownOpen(false);
                             setMobileMenuOpen(false);
                           }}
-                          className="flex items-center w-full px-3 py-2 text-left transition-colors rounded-md hover:bg-gray-50"
+                          className="flex items-center w-full px-3 py-2 text-left transition-colors rounded-md"
                         >
                           <span className="text-sm font-medium text-gray-700">{location}</span>
                         </button>
@@ -542,7 +513,7 @@ const Navbar = () => {
                   navigate("/favorites");
                   setMobileMenuOpen(false);
                 }}
-                className={`flex items-center w-full gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md hover:text-red-500 hover:bg-red-50 ${glowClass(isActiveRoute("/favorites"), "red")}`}
+                className={`flex items-center w-full gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md ${glowClass(isActiveRoute("/favorites"), "red")}`}
               >
                 <FavoriteBorder style={{ fontSize: 18 }} />
                 Favourites
@@ -553,14 +524,14 @@ const Navbar = () => {
                   navigate("/messages");
                   setMobileMenuOpen(false);
                 }}
-                className={`flex items-center w-full gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md hover:text-blue-500 hover:bg-blue-50 ${glowClass(isActiveRoute("/messages"), "blue")}`}
+                className={`flex items-center w-full gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md ${glowClass(isActiveRoute("/messages"), "blue")}`}
               >
                 <ChatBubbleOutline className="w-4 h-4" />
                 Chat
               </button>
               <button
                 onClick={handleGlobalChatClick}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md hover:text-gray-900 hover:bg-gray-50"
+                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md"
               >
                 <ChatBubbleOutline className="w-4 h-4" />
                 Messages
@@ -577,7 +548,7 @@ const Navbar = () => {
                           navigate(`/category/${cat.categoryId}`);
                           setMobileMenuOpen(false);
                         }}
-                        className="px-3 py-2 text-sm text-left text-gray-600 transition-colors rounded-md hover:text-gray-900 hover:bg-gray-50"
+                        className="px-3 py-2 text-sm text-left text-gray-600 transition-colors rounded-md"
                       >
                         {cat.name}
                       </button>
@@ -589,22 +560,22 @@ const Navbar = () => {
               {/* Mobile Actions */}
               {isAuthenticated && (
                 <div className="flex gap-3 pt-3 border-t border-gray-200">
-                  <button 
+                  <button
                     onClick={() => {
                       navigate("/messages");
                       setMobileMenuOpen(false);
                     }}
-                    className={`flex items-center gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md hover:text-gray-900 hover:bg-gray-50 ${glowClass(isActiveRoute("/messages"), "blue")}`}
+                    className={`flex items-center gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md ${glowClass(isActiveRoute("/messages"), "blue")}`}
                   >
                     <ChatBubbleOutline className="w-4 h-4" />
                     Messages
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       navigate("/notifications");
                       setMobileMenuOpen(false);
                     }}
-                    className={`flex items-center gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md hover:text-gray-900 hover:bg-gray-50 ${glowClass(isActiveRoute("/notifications"), "blue")}`}
+                    className={`flex items-center gap-2 px-3 py-2 text-sm text-gray-600 transition-colors rounded-md ${glowClass(isActiveRoute("/notifications"), "blue")}`}
                   >
                     <NotificationsNone className="w-4 h-4" />
                     Notifications
@@ -632,7 +603,7 @@ const Navbar = () => {
         }}
         onNavigate={(route) => {
           setSidebarOpen(false);
-          switch(route) {
+          switch (route) {
             case 'profile': navigate('/profile'); break;
             case 'my-ads': navigate('/my-ads'); break;
             case 'buy-packages': navigate('/buy-packages'); break;
@@ -648,7 +619,7 @@ const Navbar = () => {
 
       {/* Overlay for dropdowns */}
       {(locationDropdownOpen || categoryDropdownOpen || mobileMenuOpen) && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-black bg-opacity-20 md:hidden"
           onClick={() => {
             setLocationDropdownOpen(false);
@@ -665,7 +636,7 @@ const Navbar = () => {
           <div className="bg-white rounded-lg w-full max-w-md shadow-lg flex flex-col">
             <div className="flex items-center justify-between p-4 border-b">
               <div className="font-semibold">Your Conversations</div>
-              <button className="text-gray-500 hover:text-gray-700" onClick={() => setChatModalOpen(false)}>✕</button>
+              <button className="text-gray-500" onClick={() => setChatModalOpen(false)}>✕</button>
             </div>
             <div className="flex-1 p-4 overflow-y-auto" style={{ maxHeight: 350 }}>
               {chatLoading ? (
@@ -676,7 +647,7 @@ const Navbar = () => {
                 userChats.map(chat => {
                   const other = chat.participants.find(u => u._id !== user._id);
                   return (
-                    <div key={chat._id} className="mb-3 cursor-pointer hover:bg-gray-50 rounded p-2 flex items-center" onClick={() => openChat(chat)}>
+                    <div key={chat._id} className="mb-3 cursor-pointer rounded p-2 flex items-center" onClick={() => openChat(chat)}>
                       <Avatar sx={{ width: 32, height: 32, bgcolor: '#6B7280', fontSize: '14px', marginRight: 1 }}>
                         {other?.name?.[0] || '?'}
                       </Avatar>

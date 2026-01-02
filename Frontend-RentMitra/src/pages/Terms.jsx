@@ -1,11 +1,12 @@
 import React from 'react';
+import { APP_NAME, SUPPORT_EMAIL, SUPPORT_EMAIL_HREF } from '../constants/app';
 
 const Terms = () => (
   <div className="container max-w-3xl px-4 py-12 mx-auto">
     <h1 className="mb-6 text-3xl font-bold">Terms & Conditions</h1>
     <div className="p-8 space-y-6 bg-white shadow-lg rounded-2xl">
       <p>
-        Welcome to Rent Mitra! By using our platform, you agree to the following terms and conditions. Please read them carefully.
+        Welcome to {APP_NAME}! By using our platform, you agree to the following terms and conditions. Please read them carefully.
       </p>
       <h2 className="mt-4 text-xl font-semibold">1. User Responsibilities</h2>
       <ul className="ml-6 list-disc">
@@ -25,14 +26,14 @@ const Terms = () => (
       </ul>
       <h2 className="mt-4 text-xl font-semibold">4. Liability</h2>
       <ul className="ml-6 list-disc">
-        <li>Rent Mitra is not liable for damages, losses, or disputes between users.</li>
+        <li>{APP_NAME} is not liable for damages, losses, or disputes between users.</li>
         <li>Users are encouraged to communicate clearly and document transactions.</li>
       </ul>
       <h2 className="mt-4 text-xl font-semibold">5. Changes to Terms</h2>
       <ul className="ml-6 list-disc">
         <li>We may update these terms at any time. Continued use of the platform constitutes acceptance of the new terms.</li>
       </ul>
-      <p className="mt-6">For questions, contact us at <a href="mailto:support@rentmitra.com" className="text-gray-600 underline">support@rentmitra.com</a>.</p>
+      <p className="mt-6">For questions, contact us at <a href={SUPPORT_EMAIL_HREF} className="text-gray-600 underline">{SUPPORT_EMAIL}</a>.</p>
     </div>
   </div>
 );

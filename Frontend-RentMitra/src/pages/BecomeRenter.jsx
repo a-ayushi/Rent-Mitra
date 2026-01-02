@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { APP_NAME } from "../constants/app";
 import {
   Verified,
   Security,
@@ -60,7 +61,7 @@ const BecomeRenter = () => {
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-3xl md:text-5xl font-bold mb-4">Become a Renter</h1>
             <p className="text-gray-300 text-lg md:text-xl">
-              Turn your unused items into income. List for free and start earning today on Rent Mitra.
+              Turn your unused items into income. List for free and start earning today on {APP_NAME}.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
               <button

@@ -9,6 +9,7 @@ import {
   AttachMoney,
   Category,
   ChevronRight,
+  ChevronLeft,
   Star,
 } from "@mui/icons-material";
 import api from "../services/api";
@@ -19,8 +20,6 @@ const BeautifulRentalHome = () => {
   const navigate = useNavigate();
   const { city } = useCity();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [categories, setCategories] = useState([]);
   const [featuredItems, setFeaturedItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -114,34 +113,6 @@ const BeautifulRentalHome = () => {
     return num.toLocaleString();
   };
 
-  const iconMap = {
-    "Electronics": "💻",
-    "Camera & Photo": "📷",
-    "Camera": "📷",
-    "Sports": "⚽",
-    "Tools": "🔧",
-    "Musical": "🎸",
-    "Party": "🎉",
-    "Outdoor": "⛺",
-    "Gaming": "🎮",
-    "Books": "📚",
-    "Furniture": "🛋️",
-    "Appliances": "🏠",
-    "Vehicles": "🚗",
-    "Fashion": "👗",
-  };
-
-  const colorMap = [
-    "bg-blue-50 hover:bg-blue-100",
-    "bg-purple-50 hover:bg-purple-100",
-    "bg-green-50 hover:bg-green-100",
-    "bg-orange-50 hover:bg-orange-100",
-    "bg-pink-50 hover:bg-pink-100",
-    "bg-yellow-50 hover:bg-yellow-100",
-    "bg-teal-50 hover:bg-teal-100",
-    "bg-indigo-50 hover:bg-indigo-100",
-  ];
-
   useEffect(() => {
     fetchData();
   }, [city]);
@@ -176,7 +147,7 @@ const BeautifulRentalHome = () => {
         // The 3D transform effect can visually stack sections on top of each other because
         // transforms do not affect layout. Keep the effect for top sections only.
         // For lower sections, render normally to avoid overlap artifacts.
-        if (idx >= 3) {
+        if (idx >= 2) {
           el.style.transformStyle = "flat";
           el.style.willChange = "auto";
           el.style.backfaceVisibility = "hidden";
@@ -258,21 +229,17 @@ const BeautifulRentalHome = () => {
       // Fetch categories
       const categoriesData = await api.get("/api/products/categories");
 
-      const mappedCategories = Array.isArray(categoriesData) 
-        ? categoriesData.map((cat, idx) => ({
-            id: cat.categoryId,
-            name: cat.name,
-            icon: iconMap[cat.name] || "📦",
-            itemCount: Array.isArray(cat.subcategories) ? cat.subcategories.length : 0,
-            color: colorMap[idx % colorMap.length],
-          }))
-        : [];
-      setCategories(mappedCategories);
+      const categoriesItemsCount = Array.isArray(categoriesData)
+        ? categoriesData.reduce((sum, cat) => {
+          const subCount = Array.isArray(cat?.subcategories) ? cat.subcategories.length : 0;
+          return sum + subCount;
+        }, 0)
+        : 0;
 
       // Fetch featured items
       const itemsData = await itemService.getItems({
         featured: true,
-        limit: 8,
+        limit: 10,
         city: city === "India" ? "" : city,
       });
       const featured = Array.isArray(itemsData?.items) ? itemsData.items : [];
@@ -305,7 +272,7 @@ const BeautifulRentalHome = () => {
       // For now using placeholder logic
       setStats({
         renters: 50000,
-        items: mappedCategories.reduce((sum, cat) => sum + cat.itemCount, 0) || 0,
+        items: categoriesItemsCount || 0,
         rating: avgRating,
         verified: 98,
       });
@@ -320,10 +287,6 @@ const BeautifulRentalHome = () => {
     if (searchQuery.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
     }
-  };
-
-  const handleCategoryClick = (categoryId) => {
-    navigate(`/category/${categoryId}`);
   };
 
   const handleItemClick = (itemId) => {
@@ -371,6 +334,33 @@ const BeautifulRentalHome = () => {
     return null;
   };
 
+  const scrollContainerRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const checkScroll = () => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      const { scrollLeft, scrollWidth, clientWidth } = container;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [featuredItems]);
+
+  const scroll = (direction) => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      const scrollAmount = direction === "left" ? -300 : 300;
+      container.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    }
+  };
+
   const benefits = [
     { icon: <AttachMoney className="w-8 h-8" />, title: "Save 70% vs Buying", description: "Rent high-quality items at a fraction of the purchase cost" },
     { icon: <Verified className="w-8 h-8" />, title: "Verified Owners", description: "All item owners are identity-verified for your safety" },
@@ -389,211 +379,133 @@ const BeautifulRentalHome = () => {
 
   return (
     <div className="bg-white" style={{ perspective: "1200px", perspectiveOrigin: "center center" }}>
-      <section ref={setSectionRef(0)} className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white overflow-hidden">
-        <div className="absolute inset-0 bg-grid-white/5"></div>
-        <div className="relative container mx-auto px-4 py-6 lg:py-12">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="badge badge-glass-strong mb-6">
-              <TrendingUp className="w-4 h-4 text-green-400" />
-              <span className="text-sm font-medium">Join {formatCompact(stats.renters)} happy renters</span>
-            </div>
-
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-              Why buy?
-              <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-                Rent and pay for what you use.
-              </span>
-            </h1>
-
-            <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
-              Access thousands of items from cameras to power tools. Why buy when you can rent?
-            </p>
-
-            <div className="max-w-2xl mx-auto">
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="Search for cameras, tools, games, bikes..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  className="w-full pl-12 pr-32 py-5 rounded-2xl border-2 border-white/20 bg-white/10 backdrop-blur-md text-white placeholder-gray-400 focus:outline-none focus:border-white/40 transition-all"
-                />
-                <button
-                  onClick={handleSearch}
-                  className="btn btn-secondary absolute right-2 top-1/2 transform -translate-y-1/2"
-                >
-                  Search
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div ref={statsBarRef} className="border-t border-white/10 bg-black/20 backdrop-blur-sm">
-          <div className="container mx-auto px-4 py-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="flex items-center gap-3 justify-center">
-                <div className="text-blue-400"><TrendingUp /></div>
-                <div>
-                  <div className="text-2xl font-bold">{formatCompact(useCountUp(stats.renters, { durationMs: 1100 }))}</div>
-                  <div className="text-sm text-gray-400">Active Renters</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 justify-center">
-                <div className="text-blue-400"><Category /></div>
-                <div>
-                  <div className="text-2xl font-bold">{useCountUp(stats.items, { durationMs: 900 }).toLocaleString()}</div>
-                  <div className="text-sm text-gray-400">Items Listed</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 justify-center">
-                <div className="text-blue-400"><Star /></div>
-                <div>
-                  <div className="text-2xl font-bold">
-                    {stats.rating == null
-                      ? "Unavailable"
-                      : `${useCountUp(stats.rating, { durationMs: 900, decimals: 1 }).toFixed(1)}★`}
-                  </div>
-                  <div className="text-sm text-gray-400">Average Rating</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 justify-center">
-                <div className="text-blue-400"><Verified /></div>
-                <div>
-                  <div className="text-2xl font-bold">{Math.round(useCountUp(stats.verified, { durationMs: 900 }))}%</div>
-                  <div className="text-sm text-gray-400">Verified Owners</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Categories Section */}
-      <section ref={setSectionRef(1)} className="py-12 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-              Browse by Category
-            </h2>
-            <p className="text-gray-600 text-lg">
-              Find exactly what you need from our curated categories
-            </p>
-          </div>
-          {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
-              {[...Array(8)].map((_, idx) => (
-                <div key={idx} className="bg-gray-200 rounded-2xl h-32 animate-pulse"></div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => handleCategoryClick(cat.id)}
-                  className={`${cat.color} p-6 rounded-2xl border-2 ${
-                    selectedCategory === cat.id ? "border-gray-900" : "border-transparent"
-                  } transition-all transform hover:scale-105 hover:shadow-lg`}
-                >
-                  <div className="text-5xl mb-3">{cat.icon}</div>
-                  <div className="font-bold text-gray-900 mb-1">{cat.name}</div>
-                  <div className="text-sm text-gray-600">{cat.itemCount} items</div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
 
       {/* Featured Rentals */}
-      <section ref={setSectionRef(2)} className="pt-10 pb-20 bg-white">
+      <section ref={setSectionRef(1)} className="pt-2 pb-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-                🔥 Trending Rentals
+              <h2 className="text-2xl md:text-2xl font-bold text-gray-900">
+                🔥 Trending
               </h2>
             </div>
-            <button
+            {/* <button
               onClick={() => navigate('/search')}
               className="hidden md:flex items-center gap-2 px-4 py-2 text-sm text-gray-900 border-2 border-gray-900 rounded-lg font-semibold hover:bg-gray-900 hover:text-white transition-all"
             >
               View All
               <ChevronRight className="w-5 h-5" />
-            </button>
+            </button> */}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {loading ? (
-              [...Array(4)].map((_, idx) => <SkeletonCard key={idx} />)
-            ) : (
-              featuredItems.slice(0, 4).map((item) => {
-                const imageUrl = item?.mainImage || item?.images?.[0]?.url;
-                const displayPrice = getDisplayPrice(item);
+          <div className="relative group/section">
+            <button
+              onClick={() => scroll("left")}
+              disabled={!canScrollLeft}
+              className={`absolute left-0 top-1/2 -translate-y-1/2 -ml-4 z-10 bg-white shadow-lg border border-gray-100 rounded-full p-2 hidden md:group-hover/section:flex transition-all items-center justify-center ${!canScrollLeft
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-gray-50 cursor-pointer"
+                }`}
+              aria-label="Scroll left"
+            >
+              <ChevronLeft className={`w-6 h-6 text-gray-900 ${!canScrollLeft ? "text-opacity-50" : ""}`} />
+            </button>
+            <button
+              onClick={() => scroll("right")}
+              disabled={!canScrollRight}
+              className={`absolute right-0 top-1/2 -translate-y-1/2 -mr-4 z-10 bg-white shadow-lg border border-gray-100 rounded-full p-2 hidden md:group-hover/section:flex transition-all items-center justify-center ${!canScrollRight
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-gray-50 cursor-pointer"
+                }`}
+              aria-label="Scroll right"
+            >
+              <ChevronRight className={`w-6 h-6 text-gray-900 ${!canScrollRight ? "text-opacity-50" : ""}`} />
+            </button>
 
-                return (
-                  <div
-                    key={item._id}
-                    onClick={() => handleItemClick(item._id)}
-                    className="bg-white border-2 border-gray-100 rounded-2xl p-4 hover:border-gray-900 hover:shadow-xl transition-all group cursor-pointer"
-                  >
-                    <div className="relative mb-3">
-                      {imageUrl ? (
-                        <img
-                          src={imageUrl}
-                          alt={item.name}
-                          className="w-full h-40 object-cover rounded-xl"
-                        />
-                      ) : (
-                        <div className="w-full h-40 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center text-6xl">
-                          📦
+            <div
+              ref={scrollContainerRef}
+              onScroll={checkScroll}
+              className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide scroll-smooth px-1"
+              style={{
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+              }}
+            >
+              {loading
+                ? [...Array(5)].map((_, idx) => (
+                  <div key={idx} className="min-w-[200px] md:min-w-[240px]">
+                    <SkeletonCard />
+                  </div>
+                ))
+                : featuredItems.map((item) => {
+                  const imageUrl = item?.mainImage || item?.images?.[0]?.url;
+                  const displayPrice = getDisplayPrice(item);
+
+                  return (
+                    <div
+                      key={item._id}
+                      onClick={() => handleItemClick(item._id)}
+                      className="min-w-[200px] md:min-w-[240px] bg-white border-2 border-gray-100 rounded-2xl p-4 hover:border-gray-900 hover:shadow-xl transition-all group/card cursor-pointer"
+                    >
+                      <div className="relative mb-3">
+                        {imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt={item.name}
+                            className="w-full h-40 object-cover rounded-xl"
+                          />
+                        ) : (
+                          <div className="w-full h-40 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center text-6xl">
+                            📦
+                          </div>
+                        )}
+                      </div>
+
+                      <h3 className="font-bold text-base text-gray-900 mb-1 group-hover/card:text-blue-600 transition-colors line-clamp-2">
+                        {item.name}
+                      </h3>
+
+                      {item.rating && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="flex items-center gap-1">
+                            <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
+                            <span className="font-semibold text-xs">{item.rating}</span>
+                          </div>
+                          {item.reviewCount && (
+                            <span className="text-gray-400 text-xs">
+                              ({item.reviewCount})
+                            </span>
+                          )}
                         </div>
                       )}
-                    </div>
 
-                    <h3 className="font-bold text-base text-gray-900 mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">
-                      {item.name}
-                    </h3>
-
-                    {item.rating && (
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="flex items-center gap-1">
-                          <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
-                          <span className="font-semibold text-xs">{item.rating}</span>
+                      <div className="flex items-center justify-between pt-2.5 border-t border-gray-100">
+                        <div>
+                          <div className="text-xl font-bold text-gray-900">
+                            {displayPrice
+                              ? `₹${displayPrice.value}`
+                              : "Contact for price"}
+                          </div>
+                          {displayPrice && (
+                            <div className="text-[11px] text-gray-500">
+                              per {displayPrice.unit}
+                            </div>
+                          )}
                         </div>
-                        {item.reviewCount && (
-                          <span className="text-gray-400 text-xs">({item.reviewCount})</span>
-                        )}
+                        <button className="px-3 py-1.5 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-black transition-all">
+                          Rent Now
+                        </button>
                       </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-2.5 border-t border-gray-100">
-                      <div>
-                        <div className="text-xl font-bold text-gray-900">
-                          {displayPrice ? `₹${displayPrice.value}` : "Contact for price"}
-                        </div>
-                        {displayPrice && (
-                          <div className="text-[11px] text-gray-500">per {displayPrice.unit}</div>
-                        )}
-                      </div>
-                      <button className="px-3 py-1.5 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-black transition-all">
-                        Rent Now
-                      </button>
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })}
+            </div>
           </div>
         </div>
       </section>
 
       {/* Benefits Section */}
-      <section ref={setSectionRef(3)} className="pt-14 pb-14 bg-gradient-to-br from-gray-900 to-black text-white">
+      <section ref={setSectionRef(2)} className="pt-14 pb-14 bg-gradient-to-br from-gray-900 to-black text-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
             <h2 className="text-3xl md:text-4xl font-bold mb-3">
@@ -624,7 +536,7 @@ const BeautifulRentalHome = () => {
       <div className="h-16 bg-gradient-to-br from-gray-900 to-black"></div>
 
       {/* How It Works */}
-      <section ref={setSectionRef(4)} className="pt-24 pb-16 bg-white">
+      <section ref={setSectionRef(3)} className="pt-24 pb-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
