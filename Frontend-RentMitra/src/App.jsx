@@ -8,7 +8,6 @@ import {
   Link,
 } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "react-query";
-import { ReactQueryDevtools } from "react-query/devtools";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -275,7 +274,6 @@ function App() {
             </AuthProvider>
           </Router>
           <Toaster position="top-right" />
-          <ReactQueryDevtools initialIsOpen={false} />
         </LocalizationProvider>
       </ThemeProvider>
     </QueryClientProvider>

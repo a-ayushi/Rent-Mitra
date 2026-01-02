@@ -1,6 +1,14 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  ChevronRight,
+  SportsEsports,
+  DirectionsCar,
+  Home,
+  Chair,
+  ChildCare,
+  MedicalServices,
+  LocationOn,
   Search,
   TrendingUp,
   Verified,
@@ -8,289 +16,59 @@ import {
   Security,
   AttachMoney,
   Category,
-  ChevronRight,
   Star,
 } from "@mui/icons-material";
-import api from "../services/api";
 import itemService from "../services/itemService";
-import { useCity } from '../hooks/useCity';
+import { useCity } from "../hooks/useCity";
 
 const BeautifulRentalHome = () => {
   const navigate = useNavigate();
   const { city } = useCity();
-  const [searchQuery, setSearchQuery] = useState("");
+
   const [featuredItems, setFeaturedItems] = useState([]);
+  const [categoryItems, setCategoryItems] = useState({});
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    renters: 0,
-    items: 0,
-    rating: null,
-    verified: 0,
-  });
 
-  const statsBarRef = useRef(null);
-  const [statsVisible, setStatsVisible] = useState(false);
+  const categories = [
+    { id: 1, name: "Gamming", icon: <SportsEsports className="w-5 h-5" /> },
+    { id: 2, name: "Vehicle", icon: <DirectionsCar className="w-5 h-5" /> },
+    { id: 3, name: "Home Appliance", icon: <Home className="w-5 h-5" /> },
+    { id: 4, name: "Furniture & Home", icon: <Chair className="w-5 h-5" /> },
+    { id: 5, name: "kids and baby items", icon: <ChildCare className="w-5 h-5" /> },
+    {
+      id: 6,
+      name: "Medical & Health Equipment",
+      icon: <MedicalServices className="w-5 h-5" />,
+    },
+  ];
 
-  const prefersReducedMotion =
-    typeof window !== "undefined"
-      ? (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false)
-      : false;
+  const benefits = [
+    {
+      icon: <AttachMoney className="w-8 h-8" />,
+      title: "Save 70% vs Buying",
+      description: "Rent high-quality items at a fraction of the purchase cost",
+    },
+    {
+      icon: <Verified className="w-8 h-8" />,
+      title: "Verified Owners",
+      description: "All item owners are identity-verified for your safety",
+    },
+    {
+      icon: <LocalShipping className="w-8 h-8" />,
+      title: "Free Delivery",
+      description: "Get items delivered to your doorstep at no extra cost",
+    },
+    {
+      icon: <Security className="w-8 h-8" />,
+      title: "Damage Protection",
+      description: "Every rental includes insurance coverage",
+    },
+  ];
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (prefersReducedMotion) {
-      setStatsVisible(true);
-      return;
-    }
-
-    const el = statsBarRef.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry?.isIntersecting) {
-          setStatsVisible(true);
-          observer.disconnect();
-        }
-      },
-      {
-        threshold: 0.01,
-        // Start as soon as it enters viewport (a tiny bit early so user sees counting immediately)
-        rootMargin: '0px 0px -10% 0px',
-      }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [prefersReducedMotion]);
-
-  const useCountUp = (target, { durationMs = 900, decimals = 0 } = {}) => {
-    const [value, setValue] = useState(0);
-
-    useEffect(() => {
-      if (!statsVisible) return;
-      if (prefersReducedMotion) {
-        setValue(Number(target) || 0);
-        return;
-      }
-
-      const end = Number(target) || 0;
-      const start = 0;
-      const startAt = performance.now();
-
-      const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
-
-      let raf = 0;
-      const tick = (now) => {
-        const t = Math.min(1, (now - startAt) / durationMs);
-        const eased = easeOutCubic(t);
-        const next = start + (end - start) * eased;
-        const pow = Math.pow(10, decimals);
-        setValue(Math.round(next * pow) / pow);
-        if (t < 1) raf = requestAnimationFrame(tick);
-      };
-
-      raf = requestAnimationFrame(tick);
-      return () => cancelAnimationFrame(raf);
-    }, [target, durationMs, decimals, statsVisible, prefersReducedMotion]);
-
-    return value;
-  };
-
-  const formatCompact = (n) => {
-    const num = Number(n) || 0;
-    if (num >= 1000000) {
-      const v = Math.round((num / 1000000) * 10) / 10;
-      return `${v}M+`;
-    }
-    if (num >= 1000) {
-      const v = Math.round((num / 1000) * 10) / 10;
-      const out = String(v).endsWith(".0") ? String(Math.round(v)) : String(v);
-      return `${out}K+`;
-    }
-    return num.toLocaleString();
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [city]);
-
-  const sectionElsRef = useRef([]);
+  const rowRefs = useRef([]);
   const rafRef = useRef(0);
 
-  const setSectionRef = (idx) => (el) => {
-    sectionElsRef.current[idx] = el;
-  };
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
-    if (prefersReducedMotion) return;
-
-    const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
-    const lerp = (a, b, t) => a + (b - a) * t;
-    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
-
-    const update = () => {
-      const vh = window.innerHeight || 1;
-
-      sectionElsRef.current.forEach((el, idx) => {
-        if (!el) return;
-
-        // Ensure a deterministic stacking order. Transforms create stacking contexts,
-        // so without explicit z-index, earlier sections can paint over later sections.
-        el.style.position = "relative";
-        el.style.zIndex = String(idx);
-
-        // The 3D transform effect can visually stack sections on top of each other because
-        // transforms do not affect layout. Keep the effect for top sections only.
-        // For lower sections, render normally to avoid overlap artifacts.
-        if (idx >= 2) {
-          el.style.transformStyle = "flat";
-          el.style.willChange = "auto";
-          el.style.backfaceVisibility = "hidden";
-          el.style.webkitBackfaceVisibility = "hidden";
-          el.style.transform = "none";
-          el.style.opacity = "1";
-          el.style.filter = "none";
-          el.style.pointerEvents = "auto";
-          return;
-        }
-
-        const rect = el.getBoundingClientRect();
-        const mid = rect.top + rect.height / 2 - vh / 2;
-        const d = clamp(mid / (vh * 0.85), -1, 1);
-
-        const abs = Math.abs(d);
-        const below = clamp(d, 0, 1);
-        const above = clamp(-d, 0, 1);
-
-        const enterT = easeOutCubic(1 - abs);
-
-        const isHero = idx === 0;
-
-        // Keep the hero pinned in place (no translate/rotate). Transforms do not affect layout,
-        // so moving the hero creates a visible "gap" above it.
-        const zBase = -480;
-        const z = isHero ? 0 : (lerp(zBase, 0, enterT) - lerp(0, 180, above));
-        const rotateX = isHero ? 0 : (lerp(10, 0, enterT) - above * 7);
-        const y = isHero ? 0 : (lerp(32, 0, enterT) - above * 9);
-
-        const minOpacity = isHero ? 1 : 0.5;
-        const opacity = isHero ? 1 : clamp(minOpacity + enterT * (1 - minOpacity), minOpacity, 1);
-
-        const maxBlur = 2.2;
-        const blurPx = isHero ? 0 : lerp(maxBlur, 0, enterT);
-
-        el.style.transformStyle = "preserve-3d";
-        el.style.willChange = "transform, opacity, filter";
-        el.style.backfaceVisibility = "hidden";
-        el.style.webkitBackfaceVisibility = "hidden";
-        el.style.transform = `translate3d(0px, ${y}px, ${z}px) rotateX(${rotateX}deg)`;
-        el.style.opacity = String(opacity);
-        el.style.filter = blurPx > 0.12 ? `blur(${blurPx}px)` : "none";
-
-        if (below > 0.9) {
-          el.style.pointerEvents = "none";
-        } else {
-          el.style.pointerEvents = "auto";
-        }
-      });
-    };
-
-    let scheduled = false;
-    const scheduleUpdate = () => {
-      if (scheduled) return;
-      scheduled = true;
-      rafRef.current = window.requestAnimationFrame(() => {
-        scheduled = false;
-        update();
-      });
-    };
-
-    update();
-
-    const onResize = () => scheduleUpdate();
-    const onScroll = () => scheduleUpdate();
-    window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onResize);
-      if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
-    };
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      // Fetch categories
-      const categoriesData = await api.get("/api/products/categories");
-
-      const categoriesItemsCount = Array.isArray(categoriesData)
-        ? categoriesData.reduce((sum, cat) => {
-            const subCount = Array.isArray(cat?.subcategories) ? cat.subcategories.length : 0;
-            return sum + subCount;
-          }, 0)
-        : 0;
-
-      // Fetch featured items
-      const itemsData = await itemService.getItems({
-        featured: true,
-        limit: 8,
-        city: city === "India" ? "" : city,
-      });
-      const featured = Array.isArray(itemsData?.items) ? itemsData.items : [];
-      setFeaturedItems(featured);
-
-      const extractRating = (item) => {
-        const candidates = [
-          item?.averageRating,
-          item?.avgRating,
-          item?.rating?.average,
-          item?.rating,
-          item?.stars,
-          item?.starRating,
-        ];
-        for (const c of candidates) {
-          const n = Number(c);
-          if (Number.isFinite(n) && n >= 0 && n <= 5) return n;
-        }
-        return null;
-      };
-
-      const ratings = featured
-        .map(extractRating)
-        .filter((n) => Number.isFinite(n));
-      const avgRating = ratings.length
-        ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10
-        : null;
-
-      // You can fetch real stats from API if available
-      // For now using placeholder logic
-      setStats({
-        renters: 50000,
-        items: categoriesItemsCount || 0,
-        rating: avgRating,
-        verified: 98,
-      });
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
-    }
-  };
-
-  const handleItemClick = (itemId) => {
-    navigate(`/items/${itemId}`);
-  };
+  /* ---------------- RENT PRICE LOGIC (FROM OLD CODE) ---------------- */
 
   const parseJsonMaybe = (val, fallback) => {
     if (val == null) return fallback;
@@ -318,128 +96,261 @@ const BeautifulRentalHome = () => {
     let monthly = normalizePrice(rentPrices?.monthly);
 
     const rentType = String(item?.rentType || "").toLowerCase();
-    const primary = normalizePrice(item?.rentBasedOnType ?? item?.pricePerDay ?? item?.rentalPrice ?? item?.price);
+    const primary = normalizePrice(
+      item?.rentBasedOnType ??
+        item?.pricePerDay ??
+        item?.rentalPrice ??
+        item?.price
+    );
 
     if (primary != null) {
-      if (rentType === "daily") daily = daily ?? primary;
-      else if (rentType === "weekly") weekly = weekly ?? primary;
-      else if (rentType === "monthly") monthly = monthly ?? primary;
-      else daily = daily ?? primary;
+      if (rentType === "daily") daily ??= primary;
+      else if (rentType === "weekly") weekly ??= primary;
+      else if (rentType === "monthly") monthly ??= primary;
+      else daily ??= primary;
     }
 
     if (daily != null) return { value: daily, unit: "day" };
     if (weekly != null) return { value: weekly, unit: "week" };
     if (monthly != null) return { value: monthly, unit: "month" };
+
     return null;
   };
 
-  const benefits = [
-    { icon: <AttachMoney className="w-8 h-8" />, title: "Save 70% vs Buying", description: "Rent high-quality items at a fraction of the purchase cost" },
-    { icon: <Verified className="w-8 h-8" />, title: "Verified Owners", description: "All item owners are identity-verified for your safety" },
-    { icon: <LocalShipping className="w-8 h-8" />, title: "Free Delivery", description: "Get items delivered to your doorstep at no extra cost" },
-    { icon: <Security className="w-8 h-8" />, title: "Damage Protection", description: "Every rental includes insurance coverage" },
-  ];
+  /* ---------------- DATA FETCH ---------------- */
 
-  const SkeletonCard = () => (
-    <div className="bg-white border-2 border-gray-100 rounded-2xl p-5 animate-pulse">
-      <div className="w-full h-48 bg-gray-200 rounded-xl mb-4"></div>
-      <div className="h-6 bg-gray-200 rounded mb-2"></div>
-      <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
-      <div className="h-8 bg-gray-200 rounded"></div>
-    </div>
-  );
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const itemsData = await itemService.getItems({
+          limit: 60,
+          city: city === "India" ? "" : city,
+        });
+
+        const allItems = Array.isArray(itemsData?.items)
+          ? itemsData.items
+          : [];
+
+        setFeaturedItems(allItems.slice(0, 5));
+
+        const categoryData = {};
+        categories.forEach((cat) => {
+          categoryData[cat.name] = allItems
+            .filter((item) => item?.categoryId === cat.id)
+            .slice(0, 5);
+        });
+
+        setCategoryItems(categoryData);
+      } catch (err) {
+        console.error("Error fetching items:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [city]);
+
+  /* ---------------- SCROLL 3D EFFECT ---------------- */
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const update = () => {
+      const headerHeight = 80;
+
+      rowRefs.current.forEach((el, idx) => {
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+
+        const isExitingTop = rect.top < headerHeight;
+        const exitProgress = isExitingTop
+          ? Math.min(
+              1,
+              Math.abs(rect.top - headerHeight) / (rect.height || 1)
+            )
+          : 0;
+
+        const scale = 1 - exitProgress * 0.1;
+        const opacity = 1 - exitProgress * 0.5;
+        const translateZ = -exitProgress * 100;
+
+        el.style.transformOrigin = "center top";
+        el.style.transform = `perspective(1200px) translate3d(0,0,${translateZ}px) scale(${scale})`;
+        el.style.opacity = String(opacity);
+        el.style.zIndex = 50 - idx;
+        el.style.position = "relative";
+      });
+    };
+
+    const onScroll = () => {
+      rafRef.current = requestAnimationFrame(update);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    update();
+
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [loading, categoryItems]);
+
+  /* ---------------- RENT CARD ---------------- */
+
+  const RentalCard = ({ item }) => {
+    const imageUrl =
+      item?.mainImage || item?.imageUrls?.[0] || item?.images?.[0]?.url;
+
+    const displayPrice = getDisplayPrice(item);
+
+    const displayDate = item?.createdAt
+      ? new Date(item.createdAt).toLocaleDateString()
+      : "N/A";
+
+    return (
+      <div
+        onClick={() => navigate(`/items/${item.productId || item._id}`)}
+        className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col h-full group"
+      >
+        <div className="aspect-video w-full mb-3 overflow-hidden rounded-xl bg-gray-50">
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={item.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">
+              No Image
+            </div>
+          )}
+        </div>
+
+        <div className="flex-grow">
+          <h3 className="text-sm font-bold text-gray-800 line-clamp-1 mb-1">
+            {item.name || "Untitled Item"}
+          </h3>
+
+          <p className="text-[11px] text-gray-500 line-clamp-2 mb-2">
+            {item.description || "Item available for rent"}
+          </p>
+
+          <div className="flex items-center gap-1 text-[10px] text-gray-400 mb-3">
+            <LocationOn className="w-3 h-3 text-red-500" />
+            <span>{item.city || city || "Location"}</span>
+            <span className="mx-1">•</span>
+            <span>{displayDate}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+          <div>
+            <p className="text-lg font-black text-gray-900">
+              {displayPrice ? `₹${displayPrice.value}` : "No price"}
+            </p>
+            {displayPrice && (
+              <p className="text-[10px] text-gray-400 uppercase">
+                per {displayPrice.unit}
+              </p>
+            )}
+          </div>
+
+          <button className="bg-gray-900 text-white px-4 py-2 rounded-lg text-[11px] font-bold hover:bg-black transition-all">
+            Rent Now
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  /* ---------------- UI ---------------- */
 
   return (
-    <div className="bg-white" style={{ perspective: "1200px", perspectiveOrigin: "center center" }}>
-     
-      {/* Featured Rentals */}
-      <section ref={setSectionRef(1)} className="pt-2 pb-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl md:text-2xl font-bold text-gray-900">
-                🔥 Trending
-              </h2>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-blue-50 to-purple-100">
+      <main
+        className="container mx-auto px-4 pt-10"
+        style={{
+          clipPath: "inset(80px 0 0 0)",
+          marginTop: "-80px",
+          paddingTop: "100px",
+        }}
+      >
+        {/* Trending */}
+        <div ref={(el) => (rowRefs.current[0] = el)} className="mb-20">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-black">⚡ Trending</h2>
             <button
-              onClick={() => navigate('/search')}
-              className="hidden md:flex items-center gap-2 px-4 py-2 text-sm text-gray-900 border-2 border-gray-900 rounded-lg font-semibold hover:bg-gray-900 hover:text-white transition-all"
+              onClick={() => navigate("/search")}
+              className="text-xs font-bold border px-5 py-2 rounded-xl hover:bg-gray-900 hover:text-white"
             >
-              View All
-              <ChevronRight className="w-5 h-5" />
+              View All <ChevronRight className="w-4 h-4 inline" />
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {loading ? (
-              [...Array(5)].map((_, idx) => <SkeletonCard key={idx} />)
-            ) : (
-              featuredItems.slice(0, 5).map((item) => {
-                const imageUrl = item?.mainImage || item?.images?.[0]?.url;
-                const displayPrice = getDisplayPrice(item);
-
-                return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {loading
+              ? [...Array(5)].map((_, i) => (
                   <div
-                    key={item._id}
-                    onClick={() => handleItemClick(item._id)}
-                    className="bg-white border-2 border-gray-100 rounded-2xl p-4 hover:border-gray-900 hover:shadow-xl transition-all group cursor-pointer"
-                  >
-                    <div className="relative mb-3">
-                      {imageUrl ? (
-                        <img
-                          src={imageUrl}
-                          alt={item.name}
-                          className="w-full h-40 object-cover rounded-xl"
-                        />
-                      ) : (
-                        <div className="w-full h-40 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center text-6xl">
-                          📦
-                        </div>
-                      )}
-                    </div>
-
-                    <h3 className="font-bold text-base text-gray-900 mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">
-                      {item.name}
-                    </h3>
-
-                    {item.rating && (
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="flex items-center gap-1">
-                          <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
-                          <span className="font-semibold text-xs">{item.rating}</span>
-                        </div>
-                        {item.reviewCount && (
-                          <span className="text-gray-400 text-xs">({item.reviewCount})</span>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-2.5 border-t border-gray-100">
-                      <div>
-                        <div className="text-xl font-bold text-gray-900">
-                          {displayPrice ? `₹${displayPrice.value}` : "Contact for price"}
-                        </div>
-                        {displayPrice && (
-                          <div className="text-[11px] text-gray-500">per {displayPrice.unit}</div>
-                        )}
-                      </div>
-                      <button className="px-3 py-1.5 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-black transition-all">
-                        Rent Now
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+                    key={i}
+                    className="aspect-[3/4] bg-gray-100 rounded-2xl animate-pulse"
+                  />
+                ))
+              : featuredItems.map((item) => (
+                  <RentalCard key={item._id} item={item} />
+                ))}
           </div>
         </div>
-      </section>
 
-      {/* Benefits Section */}
-      <section ref={setSectionRef(2)} className="pt-14 pb-14 bg-gradient-to-br from-gray-900 to-black text-white">
+        {/* Categories */}
+        {categories.map((cat, index) => {
+          const items = categoryItems[cat.name] || [];
+          if (!loading && items.length === 0) return null;
+
+          return (
+            <div
+              key={cat.name}
+              ref={(el) => (rowRefs.current[index + 1] = el)}
+              className="mb-20"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl font-black flex items-center gap-3">
+                  <span className="bg-blue-50 p-2 rounded-lg text-blue-600">
+                    {cat.icon}
+                  </span>
+                  {cat.name}
+                </h2>
+                <button
+                  onClick={() => navigate(`/search?category=${cat.id}`)}
+                  className="text-xs font-bold text-gray-400 hover:text-gray-900"
+                >
+                  View All <ChevronRight className="w-4 h-4 inline" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                {loading
+                  ? [...Array(5)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="aspect-[3/4] bg-gray-100 rounded-2xl animate-pulse"
+                      />
+                    ))
+                  : items.map((item) => (
+                      <RentalCard
+                        key={item._id || item.productId}
+                        item={item}
+                      />
+                    ))}
+              </div>
+            </div>
+          );
+        })}
+      </main>
+
+      {/* ================= WHY RENT WITH US ================= */}
+      <section className="pt-20 pb-20 bg-gradient-to-b from-gray-900 via-black to-black text-white">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl md:text-4xl font-bold mb-3">
+          <div className="text-center mb-14">
+            <h2 className="text-4xl font-bold mb-3">
               Why Rent with Us?
             </h2>
             <p className="text-gray-400 text-lg">
@@ -447,30 +358,38 @@ const BeautifulRentalHome = () => {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {benefits.map((benefit, idx) => (
               <div
                 key={idx}
-                className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all"
+                className="bg-white/5 border border-white/10 rounded-3xl p-7
+                           hover:bg-white/10 transition-all duration-300
+                           backdrop-blur-md shadow-lg"
               >
-                <div className="w-14 h-14 bg-white/10 rounded-xl flex items-center justify-center mb-4 text-blue-400">
+                <div className="w-14 h-14 bg-white/10 rounded-xl
+                                flex items-center justify-center
+                                text-blue-400 mb-5">
                   {benefit.icon}
                 </div>
-                <h3 className="font-bold text-xl mb-2">{benefit.title}</h3>
-                <p className="text-gray-400 text-sm">{benefit.description}</p>
+
+                <h3 className="text-xl font-semibold mb-2">
+                  {benefit.title}
+                </h3>
+
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  {benefit.description}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <div className="h-16 bg-gradient-to-br from-gray-900 to-black"></div>
-
-      {/* How It Works */}
-      <section ref={setSectionRef(3)} className="pt-24 pb-16 bg-white">
+      {/* ================= HOW IT WORKS ================= */}
+      <section className="pt-24 pb-24 bg-white">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-3">
               How It Works
             </h2>
             <p className="text-gray-600 text-lg">
@@ -478,29 +397,55 @@ const BeautifulRentalHome = () => {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-14 max-w-6xl mx-auto">
             {[
-              { step: "1", title: "Search & Browse", desc: "Find the perfect item from thousands of listings in your city" },
-              { step: "2", title: "Book Instantly", desc: "Choose your dates, confirm your rental and pay securely online" },
-              { step: "3", title: "Rent & Enjoy", desc: "Get it delivered or pick it up, use it and return when done" },
+              {
+                step: "1",
+                title: "Search & Browse",
+                desc: "Find the perfect item from thousands of listings in your city",
+              },
+              {
+                step: "2",
+                title: "Book Instantly",
+                desc: "Choose your dates, confirm your rental and pay securely online",
+              },
+              {
+                step: "3",
+                title: "Rent & Enjoy",
+                desc: "Get it delivered or pick it up, use it and return when done",
+              },
             ].map((item, idx) => (
-              <div key={idx} className="relative">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gray-900 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-4 shadow-lg">
-                    {item.step}
-                  </div>
-                  <h3 className="font-bold text-xl text-gray-900 mb-2">{item.title}</h3>
-                  <p className="text-gray-600">{item.desc}</p>
+              <div key={idx} className="relative text-center">
+                <div
+                  className="w-16 h-16 mx-auto mb-5
+                             bg-gray-900 text-white
+                             rounded-2xl flex items-center
+                             justify-center text-2xl font-bold
+                             shadow-lg"
+                >
+                  {item.step}
                 </div>
+
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  {item.title}
+                </h3>
+
+                <p className="text-gray-600 max-w-xs mx-auto">
+                  {item.desc}
+                </p>
+
                 {idx < 2 && (
-                  <ChevronRight className="hidden md:block absolute top-8 -right-4 text-gray-300 w-8 h-8" />
+                  <ChevronRight
+                    className="hidden md:block absolute
+                               top-7 -right-10
+                               text-gray-300 w-8 h-8"
+                  />
                 )}
               </div>
             ))}
           </div>
         </div>
       </section>
-
     </div>
   );
 };
